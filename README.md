@@ -15,6 +15,7 @@ in the team still commit non typed code, then PHPDoctor is for you.
 
 ### Install via "phar" (**recommended**)
 
+https://github.com/voku/PHPDoctor/releases
 
 ### Install via "composer require"
 
