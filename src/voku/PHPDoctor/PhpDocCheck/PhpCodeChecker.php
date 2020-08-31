@@ -8,6 +8,16 @@ use voku\SimplePhpParser\Parsers\PhpCodeParser;
 
 final class PhpCodeChecker
 {
+    /**
+     * @param string   $code
+     * @param string[] $access
+     * @param bool     $skipAmbiguousTypesAsError
+     * @param bool     $skipDeprecatedMethods
+     * @param bool     $skipFunctionsWithLeadingUnderscore
+     * @param bool     $skipParseErrorsAsError
+     *
+     * @return string[][]
+     */
     public static function checkFromString(
         string $code,
         array $access = ['public', 'protected', 'private'],

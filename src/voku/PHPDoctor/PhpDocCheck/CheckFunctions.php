@@ -76,10 +76,10 @@ final class CheckFunctions
     }
 
     /**
-     * @param array  $functionInfo
-     * @param bool   $skipAmbiguousTypesAsError
-     * @param string $functionName
-     * @param array  $error
+     * @param array      $functionInfo
+     * @param bool       $skipAmbiguousTypesAsError
+     * @param string     $functionName
+     * @param string[][] $error
      *
      * @psalm-param array{fullDescription: string, line: null|int, file: null|string, error: string, is_deprecated: bool, is_meta: bool, is_internal: bool, is_removed: bool, paramsTypes: array<string, array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string, typeFromDefaultValue: null|string}>, returnTypes: array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string}} $functionInfo
      *

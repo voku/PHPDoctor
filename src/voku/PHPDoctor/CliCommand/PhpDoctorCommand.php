@@ -158,6 +158,6 @@ final class PhpDoctorCommand extends Command
         $output->writeln($errorCount . ' errors detected.');
         $output->writeln('-------------------------------');
 
-        return 0;
+        return $errorCount > 0 ? 1 : 0;
     }
 }
