@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<psalm
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xmlns="https://getpsalm.org/schema/config"
+    xsi:schemaLocation="https://getpsalm.org/schema/config vendor/vimeo/psalm/config.xsd"
+    totallyTyped="false"
+    allowPhpStormGenerics="true"
+>
+    <projectFiles>
+        <directory name="src" />
+        <ignoreFiles>
+            <directory name="vendor" />
+        </ignoreFiles>
+    </projectFiles>
+
+    <issueHandlers>
+        <InternalClass errorLevel="suppress" />
+        <MoreSpecificReturnType errorLevel="suppress" />
+        <LessSpecificReturnStatement errorLevel="suppress" />
+        <MoreSpecificImplementedParamType errorLevel="suppress" />
+        <UnresolvableInclude errorLevel="suppress" />
+        <ParamNameMismatch errorLevel="suppress" />
+        <ForbiddenCode errorLevel="suppress" />
+        <RedundantCondition errorLevel="suppress" />
+    </issueHandlers>
+
+</psalm>

@@ -1,0 +1,14 @@
+parameters:
+    reportUnmatchedIgnoredErrors: false
+    checkMissingIterableValueType: false
+    checkGenericClassInNonGenericObjectType: false
+    level: max
+    paths:
+        - %currentWorkingDirectory%/src/
+    ignoreErrors:
+        - '#should be compatible with#'
+        - '#Argument of an invalid type voku\\SimplePhpParser\\Model\\PHP.* supplied for foreach, only iterables are supported\.#'
+        - '#undefined property PhpParser\\Node::\$name#'
+        - '#undefined property PhpParser\\Node\\Expr#'
+        - '#BasePHPElement::getFQN\(\) should return class-string but returns string#'
+        - '#Unable to resolve the template type .* in call to function Amp\\Promise\\.*#'

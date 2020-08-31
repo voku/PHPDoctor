@@ -1,0 +1,19 @@
+# composer
+vendor
+composer.lock
+
+# php (phpunit)
+build/logs/
+
+# phpcs fixer
+.php_cs.cache
+
+# PhpStorm
+.idea/
+
+# php box
+/.box_dump/
+/phpdoctor.phar
+
+# phive
+/tools/

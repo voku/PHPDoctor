@@ -1,0 +1,11 @@
+preset: psr2
+
+enabled:
+  - unused_use
+  - include
+  - single_quote
+  - ordered_use
+
+disabled:
+  - indentation
+

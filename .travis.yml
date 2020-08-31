@@ -1,0 +1,83 @@
+os:
+  - linux
+
+dist: xenial
+
+language: php
+
+git:
+  depth: 2
+
+cache:
+  directories:
+    - $HOME/.composer/cache
+    - $HOME/.phive
+
+jobs:
+  fast_finish: true
+  include:
+    - php: 7.4
+    - php: 7.3
+      after_script:
+        - travis_retry composer require --no-interaction --prefer-dist --optimize-autoloader php-coveralls/php-coveralls
+        - vendor/bin/php-coveralls -v
+        - tools/ocular code-coverage:upload --format=php-clover build/logs/clover.xml
+        - bash <(curl -s "https://codecov.io/bash") -Z
+    - php: 7.2
+    - php: 7.1
+    - php: nightly
+    - name: "Coding style"
+      php: 7.4
+      install: "skip"
+      script:
+        - find -L . -path ./vendor -prune -o -name '*.php' -print0 | xargs -0 -n 1 -P 4 -- php -l
+        - tools/php-cs-fixer fix --dry-run --diff
+    - name: "Static analysis"
+      php: 7.4
+      install:
+        - travis_retry composer require --no-interaction --prefer-dist --optimize-autoloader phpstan/phpstan
+        - travis_retry composer require --no-interaction --prefer-dist --optimize-autoloader vimeo/psalm
+      script:
+        - vendor/bin/phpstan analyse
+        - vendor/bin/psalm
+    - name: "Compile PHAR"
+      php: 7.4
+      install:
+        - travis_retry composer update --no-interaction --prefer-dist --optimize-autoloader
+      script:
+        - tools/box compile
+  allow_failures:
+    - php: nightly
+
+before_install:
+  - |
+    # Download phive if not cached
+    if [ ! -r "${HOME}/.phive/phive.phar" ]; then
+        mkdir -p ~/bin
+        if [ "$(phpenv version-name)" == 7.1 ]; then
+            # phive v0.13.3 last version supporting PHP 7.1
+            travis_retry wget -O "${HOME}/.phive/phive.phar" "https://github.com/phar-io/phive/releases/download/0.13.3/phive-0.13.3.phar"
+            travis_retry wget -O "${HOME}/.phive/phive.phar.asc" "https://github.com/phar-io/phive/releases/download/0.13.3/phive-0.13.3.phar.asc"
+        else
+            travis_retry wget -O "${HOME}/.phive/phive.phar" "https://phar.io/releases/phive.phar"
+            travis_retry wget -O "${HOME}/.phive/phive.phar.asc" "https://phar.io/releases/phive.phar.asc"
+        fi
+        travis_retry gpg --batch --keyserver ha.pool.sks-keyservers.net --keyserver-options timeout=10 --recv-keys 0x9D8A98B29B2D5D79
+        if ! gpg --batch --verify "${HOME}/.phive/phive.phar.asc" "${HOME}/.phive/phive.phar"; then
+            echo "Invalid phive signature" 1>&2
+            rm -f "${HOME}/.phive/phive.phar"
+            exit 11
+        fi
+        rm "${HOME}/.phive/phive.phar.asc"
+    fi
+  - install --verbose --mode=0755 -T "${HOME}/.phive/phive.phar" "${HOME}/bin/phive"
+  - export PATH="${HOME}/bin:${PATH}"
+  - travis_retry phive install --force-accept-unsigned --trust-gpg-keys E82B2FB314E9906E
+
+install:
+  - composer validate --strict
+  - travis_retry composer update --no-interaction --prefer-dist --optimize-autoloader
+  - mkdir -p build/logs
+
+script:
+  - vendor/bin/phpunit
