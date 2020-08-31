@@ -38,7 +38,7 @@ jobs:
         - travis_retry composer require --no-interaction --prefer-dist --optimize-autoloader phpstan/phpstan
         - travis_retry composer require --no-interaction --prefer-dist --optimize-autoloader vimeo/psalm
       script:
-        - bin/phpdoctor analyse src
+        - php bin/phpdoctor analyse src
         - vendor/bin/phpstan analyse
         - vendor/bin/psalm
     - name: "Compile PHAR"
