@@ -17,7 +17,7 @@ final class CheckPhpDocType
      * @param string|null $propertyName
      *
      * @psalm-param array{type: string, typeFromPhpDoc: string|null, typeFromPhpDocExtended: string|null, typeFromPhpDocSimple: string, typeFromPhpDocMaybeWithComment => string|null} $types
-     * @psalm-param array{fullDescription: string, line: null|int, file: null|string, error: string, is_deprecated: bool, is_meta: bool, is_internal: bool, is_removed: bool, paramsTypes: array<string, array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string, typeFromDefaultValue: null|string}>, returnTypes: array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string} $fileInfo
+     * @psalm-param array{line: null|int, file: null|string} $fileInfo
      *
      * @return string[][]
      */

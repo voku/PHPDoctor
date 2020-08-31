@@ -138,7 +138,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     0 => '[16]: missing parameter type for HelloWorld->sayHello2() | parameter:date',
-                    1 => '[8]: missing parameter type for HelloWorld->sayHello() | parameter:date'
+                    1 => '[8]: missing parameter type for HelloWorld->sayHello() | parameter:date',
                 ],
             ],
             $phpCodeErrors
