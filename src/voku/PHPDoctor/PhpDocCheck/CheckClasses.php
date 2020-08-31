@@ -52,7 +52,7 @@ final class CheckClasses
 
     /**
      * @param \voku\SimplePhpParser\Model\PHPClass $class
-     * @param array                                $access
+     * @param string[]                             $access
      * @param bool                                 $skipDeprecatedMethods
      * @param bool                                 $skipMethodsWithLeadingUnderscore
      * @param bool                                 $skipAmbiguousTypesAsError
