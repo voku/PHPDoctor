@@ -42,10 +42,16 @@ final class PhpDoctorCommand extends Command
             ->setDefinition(
                 new InputDefinition(
                     [
-                        new InputArgument('path', InputArgument::REQUIRED, 'The path to analyse'),
-                        new InputArgument('autoload-file', InputArgument::OPTIONAL, 'The path to your autoloader'),
+                        new InputArgument('path', InputArgument::OPTIONAL | InputArgument::IS_ARRAY, 'The path to analyse'),
                     ]
                 )
+            )
+            ->addOption(
+                'autoload-file',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'The path to your autoloader.',
+                ''
             )
             ->addOption(
                 'access',
@@ -92,16 +98,38 @@ final class PhpDoctorCommand extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        $path = $input->getArgument('path');
-        \assert(\is_string($path));
-        $realPath = \realpath($path);
-        \assert(\is_string($realPath));
+        $pathArray = $input->getArgument('path');
+        if (!$pathArray) {
+            // fallback
+            $pathArray = ['.'];
+        }
+        \assert(\is_array($pathArray));
+        foreach ($pathArray as $pathItem) {
+            $realPath = \realpath($pathItem);
+            \assert(\is_string($realPath));
 
-        $autoloadPath = $input->getArgument('autoload-file');
+            if (!$realPath || !\file_exists($realPath)) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The path "' . $pathItem . '" does not exists.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+        }
+
+        $autoloadPath = $input->getOption('autoload-file');
         \assert(\is_string($autoloadPath) || $autoloadPath === null);
         if ($autoloadPath) {
             $autoloadRealPath = \realpath($autoloadPath);
             \assert(\is_string($autoloadRealPath));
+
+            if (!$autoloadRealPath || !\file_exists($autoloadRealPath)) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The autoload-file "' . $autoloadPath . '" does not exists.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
 
             $this->autoloaderProjectPaths[] = $autoloadRealPath;
         }
@@ -122,14 +150,14 @@ final class PhpDoctorCommand extends Command
         $formatter->setStyle('file', new OutputFormatterStyle('default', null, ['bold']));
         $formatter->setStyle('error', new OutputFormatterStyle('red', null, []));
 
-        $banner = \sprintf('List of errors in : %s', $realPath);
+        $banner = \sprintf('List of errors in : %s', \implode(' | ', $pathArray));
         $output->writeln(\str_repeat('=', \strlen($banner)));
         $output->writeln($banner);
         $output->writeln(\str_repeat('=', \strlen($banner)));
         $output->writeln('');
 
         $errors = PhpCodeChecker::checkPhpFiles(
-            $realPath,
+            $pathArray,
             $access,
             $skipAmbiguousTypesAsError,
             $skipDeprecatedFunctions,

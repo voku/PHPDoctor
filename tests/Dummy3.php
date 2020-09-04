@@ -187,6 +187,18 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
     }
 
     /**
+     * @param class-string $className
+     *
+     * @return DummyInterface
+     *
+     * @noinspection PhpDocSignatureInspection
+     */
+    public function lall12(string $className): DummyInterface
+    {
+        return new self;
+    }
+
+    /**
      * This is a test-text [...] öäü !"§?.
      *
      * @param \phpDocumentor\Reflection\DocBlock\Tags\BaseTag $parsedParamTag

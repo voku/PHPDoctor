@@ -37,19 +37,19 @@ final class PhpCodeChecker
     }
 
     /**
-     * @param string   $path
-     * @param bool     $skipAmbiguousTypesAsError
-     * @param string[] $access
-     * @param bool     $skipDeprecatedFunctions
-     * @param bool     $skipFunctionsWithLeadingUnderscore
-     * @param bool     $skipParseErrorsAsError
-     * @param string[] $autoloaderProjectPaths
-     * @param string[] $pathExcludeRegex
+     * @param string|string[] $path
+     * @param bool            $skipAmbiguousTypesAsError
+     * @param string[]        $access
+     * @param bool            $skipDeprecatedFunctions
+     * @param bool            $skipFunctionsWithLeadingUnderscore
+     * @param bool            $skipParseErrorsAsError
+     * @param string[]        $autoloaderProjectPaths
+     * @param string[]        $pathExcludeRegex
      *
      * @return string[][]
      */
     public static function checkPhpFiles(
-        string $path,
+        $path,
         array $access = ['public', 'protected', 'private'],
         bool $skipAmbiguousTypesAsError = false,
         bool $skipDeprecatedFunctions = false,
@@ -61,33 +61,41 @@ final class PhpCodeChecker
         // init
         $errors = [];
 
-        $phpInfo = PhpCodeParser::getPhpFiles(
-            $path,
-            $autoloaderProjectPaths,
-            $pathExcludeRegex
-        );
-
-        if (!$skipParseErrorsAsError) {
-            $errors[''] = $phpInfo->getParseErrors();
+        if (!\is_array($path)) {
+            $path = [$path];
         }
 
-        $errors = CheckFunctions::checkFunctions(
-            $phpInfo,
-            $skipDeprecatedFunctions,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipAmbiguousTypesAsError,
-            $skipParseErrorsAsError,
-            $errors
-        );
+        foreach ($path as $pathItem) {
+            $phpInfo = PhpCodeParser::getPhpFiles(
+                $pathItem,
+                $autoloaderProjectPaths,
+                $pathExcludeRegex
+            );
 
-        return CheckClasses::checkClasses(
-            $phpInfo,
-            $access,
-            $skipDeprecatedFunctions,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipAmbiguousTypesAsError,
-            $skipParseErrorsAsError,
-            $errors
-        );
+            if (!$skipParseErrorsAsError) {
+                $errors[''] = $phpInfo->getParseErrors();
+            }
+
+            $errors = CheckFunctions::checkFunctions(
+                $phpInfo,
+                $skipDeprecatedFunctions,
+                $skipFunctionsWithLeadingUnderscore,
+                $skipAmbiguousTypesAsError,
+                $skipParseErrorsAsError,
+                $errors
+            );
+
+            $errors = CheckClasses::checkClasses(
+                $phpInfo,
+                $access,
+                $skipDeprecatedFunctions,
+                $skipFunctionsWithLeadingUnderscore,
+                $skipAmbiguousTypesAsError,
+                $skipParseErrorsAsError,
+                $errors
+            );
+        }
+
+        return $errors;
     }
 }

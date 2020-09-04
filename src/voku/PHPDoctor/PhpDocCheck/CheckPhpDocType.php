@@ -2,6 +2,8 @@
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\SimplePhpParser\Parsers\Helper\Utils;
+
 /**
  * @internal
  */
@@ -125,15 +127,42 @@ final class CheckPhpDocType
                 ) {
                     $checked = false;
 
+                    if (
+                        $typeFromPhpDocInput
+                        &&
+                        $typeFromPhpSingle === 'string'
+                        &&
+                        \strpos($typeFromPhpDocInput, 'class-string') === 0
+                    ) {
+                        $checked = true;
+                    }
+
                     /** @noinspection ArgumentEqualsDefaultValueInspection */
                     if (
-                    (
-                        \class_exists($typeFromPhpSingle, true)
-                        ||
-                        \interface_exists($typeFromPhpSingle, true)
-                    )
+                        $checked === false
+                        &&
+                        (
+                            \class_exists($typeFromPhpSingle, true)
+                            ||
+                            \interface_exists($typeFromPhpSingle, true)
+                        )
                     ) {
                         foreach ($typeFromPhpDoc as $typeFromPhpDocTmp) {
+                            // prevent false-positive results if the namespace is only imported party etc.
+                            if (
+                                $typeFromPhpDocTmp
+                                &&
+                                (
+                                    $typeFromPhpDocTmp === $typeFromPhpSingle
+                                    ||
+                                    \strpos($typeFromPhpSingle, $typeFromPhpDocTmp) !== false
+                                )
+                            ) {
+                                $checked = true;
+
+                                break;
+                            }
+
                             /** @noinspection ArgumentEqualsDefaultValueInspection */
                             if (
                                 $typeFromPhpDocTmp
@@ -146,7 +175,7 @@ final class CheckPhpDocType
                                 &&
                                 (
                                     /** @phpstan-ignore-next-line */
-                                    ($typeFromPhpDocReflectionClass = \Roave\BetterReflection\Reflection\ReflectionClass::createFromName($typeFromPhpDocTmp))
+                                    ($typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocTmp))
                                     &&
                                     (
                                         $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpSingle)
@@ -209,6 +238,18 @@ final class CheckPhpDocType
                     }
 
                     if (
+                        $typeFromPhpWithoutNull
+                        &&
+                        $typeFromPhpDocSingle
+                        &&
+                        $typeFromPhpWithoutNull === 'string'
+                        &&
+                        \strpos($typeFromPhpDocSingle, 'class-string') === 0
+                    ) {
+                        $checked = true;
+                    }
+
+                    if (
                         $typeFromPhpDocSingle
                         &&
                         $typeFromPhpWithoutNull
@@ -231,8 +272,25 @@ final class CheckPhpDocType
                     ) {
                         $checked = false;
 
+                        // prevent false-positive results if the namespace is only imported party etc.
+                        if (
+                            $typeFromPhpWithoutNull
+                            &&
+                            $typeFromPhpDocSingle
+                            &&
+                            (
+                                $typeFromPhpDocSingle === $typeFromPhpWithoutNull
+                                ||
+                                \strpos($typeFromPhpWithoutNull, $typeFromPhpDocSingle) !== false
+                            )
+                        ) {
+                            $checked = true;
+                        }
+
                         /** @noinspection ArgumentEqualsDefaultValueInspection */
                         if (
+                            $checked === false
+                            &&
                             $typeFromPhpDocSingle
                             &&
                             (
@@ -247,7 +305,7 @@ final class CheckPhpDocType
                                 \interface_exists($typeFromPhpDocSingle, true)
                             )
                         ) {
-                            $typeFromPhpDocReflectionClass = \Roave\BetterReflection\Reflection\ReflectionClass::createFromName($typeFromPhpDocSingle);
+                            $typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocSingle);
                             if (
                                 $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpWithoutNull)
                                 ||

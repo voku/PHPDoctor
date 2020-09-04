@@ -27,13 +27,13 @@ composer require voku/PHPDoctor
 
 ```
 Usage:
-  analyse [options] [--] <path> [<autoload-file>]
+  analyse [options] [--] <path...>
 
 Arguments:
   path                                                                                   The path to analyse
-  autoload-file                                                                          The path to your autoloader
 
 Options:
+      --autoload-file[=AUTOLOAD-FILE]                                                    The path to your autoloader. [default: ""]
       --access[=ACCESS]                                                                  Check for "public|protected|private" methods. [default: "public|protected|private"]
       --skip-ambiguous-types-as-error[=SKIP-AMBIGUOUS-TYPES-AS-ERROR]                    Skip check for ambiguous types. (false or true) [default: "false"]
       --skip-deprecated-functions[=SKIP-DEPRECATED-FUNCTIONS]                            Skip check for deprecated functions / methods. (false or true) [default: "false"]
