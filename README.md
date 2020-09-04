@@ -65,9 +65,12 @@ $phpdocErrors = PhpCodeChecker::checkFromString($code);
 // [8]: missing parameter type for HelloWorld->sayHello() | parameter:date']
 ```
 
-### "phar" build
+### Building the PHAR file
 
-```php ~/Downloads/box.phar compile --debug```
+```bash
+phive install --force-accept-unsigned humbug/box
+php tools/box compile --debug
+```
 
 ### Support
 
