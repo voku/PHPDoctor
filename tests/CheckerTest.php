@@ -78,7 +78,8 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                     1 => '[39]: missing return type for voku\tests\Dummy8->foo_broken()',
                 ],
 
-            ], $phpCodeErrors
+            ],
+            $phpCodeErrors
         );
 
         // --------------------------
