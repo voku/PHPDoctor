@@ -39,4 +39,13 @@ final class Dummy8 extends Dummy6
     public function foo_broken($lall) {
         return $lall;
     }
+
+    /**
+     * @param mixed $lall <p>this is mixed but it is ok, because ...</p> <phpdoctor-ignore-this-line/>
+     *
+     * @return array <phpdoctor-ignore-this-line/>
+     */
+    public function foo_ignore($lall) {
+        return $lall;
+    }
 }

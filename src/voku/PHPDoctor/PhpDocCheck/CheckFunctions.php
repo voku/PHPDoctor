@@ -29,6 +29,10 @@ final class CheckFunctions
             $skipDeprecatedFunctions,
             $skipFunctionsWithLeadingUnderscore
         ) as $functionName => $functionInfo) {
+            if (!$skipParseErrorsAsError && $functionInfo['error']) {
+                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . $functionInfo['error'];
+            }
+
             $error = self::checkParameter(
                 $functionInfo,
                 $skipAmbiguousTypesAsError,
@@ -36,8 +40,17 @@ final class CheckFunctions
                 $error
             );
 
+            if (
+                $functionInfo['returnPhpDocRaw']
+                &&
+                \strpos($functionInfo['returnPhpDocRaw'], '<phpdoctor-ignore-this-line/>') !== false
+            ) {
+                continue;
+            }
+
             // reset
             $typeFound = false;
+
             foreach ($functionInfo['returnTypes'] as $key => $type) {
                 if ($key === 'typeFromPhpDocMaybeWithComment') {
                     continue;
@@ -66,10 +79,6 @@ final class CheckFunctions
             } else {
                 $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: missing return type for ' . $functionName . '()';
             }
-
-            if (!$skipParseErrorsAsError && $functionInfo['error']) {
-                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . $functionInfo['error'];
-            }
         }
 
         return $error;
@@ -81,9 +90,35 @@ final class CheckFunctions
      * @param string     $functionName
      * @param string[][] $error
      *
-     * @psalm-param array{fullDescription: string, line: null|int, file: null|string, error: string, is_deprecated: bool, is_meta: bool, is_internal: bool, is_removed: bool, paramsTypes: array<string, array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string, typeFromDefaultValue: null|string}>, returnTypes: array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: null|string}} $functionInfo
-     *
      * @return string[][]
+     *
+     * @phpstan-param array{
+     *     fullDescription: string,
+     *     line: null|int,
+     *     file: null|string,
+     *     error: string,
+     *     is_deprecated: bool,
+     *     is_meta: bool,
+     *     is_internal: bool,
+     *     is_removed: bool,
+     *     paramsTypes: array<string, array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string,
+     *         typeFromDefaultValue: null|string
+     *     }>,
+     *     returnTypes: array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string
+     *     },
+     *     paramsPhpDocRaw: array<string, null|string>,
+     *     returnPhpDocRaw: null|string
+     *  } $functionInfo
      */
     private static function checkParameter(
         array $functionInfo,
@@ -94,6 +129,15 @@ final class CheckFunctions
         foreach ($functionInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
+
+            if (
+                isset($functionInfo['paramsPhpDocRaw'][$paramName])
+                &&
+                \strpos($functionInfo['paramsPhpDocRaw'][$paramName], '<phpdoctor-ignore-this-line/>') !== false
+            ) {
+                continue;
+            }
+
             foreach ($paramTypes as $key => $type) {
                 if ($key === 'typeFromPhpDocMaybeWithComment' || $key === 'typeFromDefaultValue') {
                     continue;
@@ -107,6 +151,7 @@ final class CheckFunctions
                     $typeFound = true;
                 }
             }
+
             if ($typeFound) {
                 if ($paramTypes['typeFromPhpDocSimple'] && $paramTypes['type']) {
                     $error = CheckPhpDocType::checkPhpDocType(

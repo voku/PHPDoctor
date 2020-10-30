@@ -65,6 +65,21 @@ $phpdocErrors = PhpCodeChecker::checkFromString($code);
 // [8]: missing parameter type for HelloWorld->sayHello() | parameter:date']
 ```
 
+### Ignore errors
+
+You can use ```<phpdoctor-ignore-this-line/>``` in @param or @return phpdocs to ignore the errors directly in your code.
+
+```php
+/**
+ * @param mixed $lall <p>this is mixed but it is ok, because ...</p> <phpdoctor-ignore-this-line/>
+ *
+ * @return array <phpdoctor-ignore-this-line/>
+ */
+function foo_ignore($lall) {
+    return $lall;
+}
+```
+
 ### Building the PHAR file
 
 ```bash

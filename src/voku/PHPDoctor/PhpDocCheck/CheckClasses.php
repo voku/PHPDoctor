@@ -75,36 +75,24 @@ final class CheckClasses
             $skipDeprecatedMethods,
             $skipMethodsWithLeadingUnderscore
         ) as $methodName => $methodInfo) {
-            foreach ($methodInfo['paramsTypes'] as $paramName => $paramTypes) {
-                // reset
-                $typeFound = false;
-                foreach ($paramTypes as $key => $type) {
-                    if ($key === 'typeFromPhpDocMaybeWithComment' || $key === 'typeFromDefaultValue') {
-                        continue;
-                    }
+            if (!$skipParseErrorsAsError && $methodInfo['error']) {
+                $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: ' . $methodInfo['error'];
+            }
 
-                    if (
-                        $type
-                        &&
-                        ($skipAmbiguousTypesAsError || ($type !== 'mixed' && $type !== 'array'))
-                    ) {
-                        $typeFound = true;
-                    }
-                }
-                if ($typeFound) {
-                    if ($paramTypes['typeFromPhpDocSimple'] && $paramTypes['type']) {
-                        $error = CheckPhpDocType::checkPhpDocType(
-                            $paramTypes,
-                            $methodInfo,
-                            ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
-                            $error,
-                            ($class->name ?? null),
-                            $paramName
-                        );
-                    }
-                } else {
-                    $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: missing parameter type for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '() | parameter:' . $paramName;
-                }
+            $error = self::checkParameter(
+                $methodInfo,
+                $skipAmbiguousTypesAsError,
+                $class,
+                $methodName,
+                $error
+            );
+
+            if (
+                $methodInfo['returnPhpDocRaw']
+                &&
+                \strpos($methodInfo['returnPhpDocRaw'], '<phpdoctor-ignore-this-line/>') !== false
+            ) {
+                continue;
             }
 
             /** @noinspection InArrayCanBeUsedInspection */
@@ -121,6 +109,7 @@ final class CheckClasses
             ) {
                 // reset
                 $typeFound = false;
+
                 foreach ($methodInfo['returnTypes'] as $key => $type) {
                     if ($key === 'typeFromPhpDocMaybeWithComment') {
                         continue;
@@ -134,6 +123,7 @@ final class CheckClasses
                         $typeFound = true;
                     }
                 }
+
                 if ($typeFound) {
                     if ($methodInfo['returnTypes']['typeFromPhpDocSimple'] && $methodInfo['returnTypes']['type']) {
                         /** @noinspection ArgumentEqualsDefaultValueInspection */
@@ -149,10 +139,97 @@ final class CheckClasses
                 } else {
                     $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: missing return type for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
                 }
+            }
+        }
 
-                if (!$skipParseErrorsAsError && $methodInfo['error']) {
-                    $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: ' . $methodInfo['error'];
+        return $error;
+    }
+
+    /**
+     * @param array                                $methodInfo
+     * @param bool                                 $skipAmbiguousTypesAsError
+     * @param \voku\SimplePhpParser\Model\PHPClass $class
+     * @param string                               $methodName
+     * @param string[][]                           $error
+     * @param array{
+     *     fullDescription: string,
+     *     line: null|int,
+     *     file: null|string,
+     *     error: string,
+     *     is_deprecated: bool,
+     *     is_static: null|bool,
+     *     is_meta: bool,
+     *     is_internal: bool,
+     *     is_removed: bool,
+     *     paramsTypes: array<string,
+     *         array{
+     *           type: null|string,
+     *           typeFromPhpDoc: null|string,
+     *           typeFromPhpDocExtended: null|string,
+     *           typeFromPhpDocSimple: null|string,
+     *           typeFromPhpDocMaybeWithComment: null|string,
+     *           typeFromDefaultValue: null|string
+     *         }
+     *     >,
+     *     returnTypes: array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string
+     *     },
+     *     paramsPhpDocRaw: array<string, null|string>,
+     *     returnPhpDocRaw: null|string
+     * } $methodInfo
+     *
+     * @return string[][]
+     */
+    private static function checkParameter(
+        $methodInfo,
+        bool $skipAmbiguousTypesAsError,
+        \voku\SimplePhpParser\Model\PHPClass $class,
+        string $methodName,
+        array $error
+    ): array {
+        foreach ($methodInfo['paramsTypes'] as $paramName => $paramTypes) {
+            // reset
+            $typeFound = false;
+
+            if (
+                isset($methodInfo['paramsPhpDocRaw'][$paramName])
+                &&
+                \strpos($methodInfo['paramsPhpDocRaw'][$paramName], '<phpdoctor-ignore-this-line/>') !== false
+            ) {
+                continue;
+            }
+
+            foreach ($paramTypes as $key => $type) {
+                if ($key === 'typeFromPhpDocMaybeWithComment' || $key === 'typeFromDefaultValue') {
+                    continue;
                 }
+
+                if (
+                    $type
+                    &&
+                    ($skipAmbiguousTypesAsError || ($type !== 'mixed' && $type !== 'array'))
+                ) {
+                    $typeFound = true;
+                }
+            }
+
+            if ($typeFound) {
+                if ($paramTypes['typeFromPhpDocSimple'] && $paramTypes['type']) {
+                    $error = CheckPhpDocType::checkPhpDocType(
+                        $paramTypes,
+                        $methodInfo,
+                        ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
+                        $error,
+                        ($class->name ?? null),
+                        $paramName
+                    );
+                }
+            } else {
+                $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: missing parameter type for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '() | parameter:' . $paramName;
             }
         }
 
@@ -181,6 +258,7 @@ final class CheckClasses
         ) as $propertyName => $propertyTypes) {
             // reset
             $typeFound = false;
+
             foreach ($propertyTypes as $key => $type) {
                 if ($key === 'typeFromPhpDocMaybeWithComment' || $key === 'typeFromDefaultValue') {
                     continue;

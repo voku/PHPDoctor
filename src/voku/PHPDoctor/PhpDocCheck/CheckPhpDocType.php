@@ -36,6 +36,7 @@ final class CheckPhpDocType
         $typeFromPhpWithoutNull = null;
         $typeFromPhpDocInput = $types['typeFromPhpDocSimple'];
         $typeFromPhpInput = $types['type'];
+
         if (
             isset($types['typeFromDefaultValue'])
             &&

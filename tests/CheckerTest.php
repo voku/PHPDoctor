@@ -20,16 +20,17 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 'PHPDoctor/tests/Dummy3.php' => [
-                    0 => '[9]: missing return type for voku\tests\foo3()',
-                    1 => '[19]: missing property type for voku\tests\Dummy3->$foo',
-                    2 => '[19]: missing property type for voku\tests\Dummy3->$foo_mixed',
-                    3 => '[44]: missing parameter type for voku\tests\Dummy3->lall() | parameter:foo',
-                    4 => '[44]: missing return type for voku\tests\Dummy3->lall()',
-                    5 => '[74]: wrong return type "string" in phpdoc from voku\tests\Dummy3->lall3()',
-                    6 => '[154]: missing parameter type "null" in phpdoc from voku\tests\Dummy3->lall8() | parameter:case',
-                    7 => '[64]: wrong return type "null" in phpdoc from voku\tests\Dummy3->lall2_1()',
-                    8 => '[54]: missing return type "null" in phpdoc from voku\tests\Dummy3->lall2()',
-                    9 => '[84]: wrong parameter type "string" in phpdoc from voku\tests\Dummy3->lall3_1()  | parameter:foo',
+                    0  => '[9]: missing return type for voku\tests\foo3()',
+                    1  => '[19]: missing property type for voku\tests\Dummy3->$foo',
+                    2  => '[19]: missing property type for voku\tests\Dummy3->$foo_mixed',
+                    3  => '[44]: missing parameter type for voku\tests\Dummy3->lall() | parameter:foo',
+                    4  => '[44]: missing return type for voku\tests\Dummy3->lall()',
+                    5  => '[54]: missing return type "null" in phpdoc from voku\tests\Dummy3->lall2()',
+                    6  => '[64]: wrong return type "null" in phpdoc from voku\tests\Dummy3->lall2_1()',
+                    7  => '[74]: wrong return type "string" in phpdoc from voku\tests\Dummy3->lall3()',
+                    8  => '[84]: wrong parameter type "string" in phpdoc from voku\tests\Dummy3->lall3_1()  | parameter:foo',
+                    9  => '[104]: missing return type "Generator" in phpdoc from voku\tests\Dummy3->lall3_2_1()',
+                    10 => '[154]: missing parameter type "null" in phpdoc from voku\tests\Dummy3->lall8() | parameter:case',
                 ],
             ],
             $phpCodeErrors
@@ -45,12 +46,12 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             static::assertSame(
                 [
                     'PHPDoctor/tests/Dummy5.php' => [
-                        0 => '[12]: missing property type for voku\tests\Dummy5->$foo',
-                        1 => '[12]: missing property type for voku\tests\Dummy5->$foo_mixed',
-                        2 => '[12]: missing property type "int" in phpdoc from voku\tests\Dummy5 | property:foo_int_4',
-                        3 => '[12]: wrong property type "string" in phpdoc from voku\tests\Dummy5  | property:foo_int_4',
-                        4 => '[12]: missing property type "null" in phpdoc from voku\tests\Dummy5 | property:foo_int_6',
-                        5 => '[12]: wrong property type "null" in phpdoc from voku\tests\Dummy5  | property:foo_int_7',
+                        0 => '[12]: missing property type "int" in phpdoc from voku\tests\Dummy5 | property:foo_int_4',
+                        1 => '[12]: missing property type "null" in phpdoc from voku\tests\Dummy5 | property:foo_int_6',
+                        2 => '[12]: missing property type for voku\tests\Dummy5->$foo',
+                        3 => '[12]: missing property type for voku\tests\Dummy5->$foo_mixed',
+                        4 => '[12]: wrong property type "null" in phpdoc from voku\tests\Dummy5  | property:foo_int_7',
+                        5 => '[12]: wrong property type "string" in phpdoc from voku\tests\Dummy5  | property:foo_int_4',
                     ],
                 ],
                 $phpCodeErrors
@@ -194,8 +195,8 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 '' => [
-                    0 => '[16]: missing parameter type for HelloWorld->sayHello2() | parameter:date',
-                    1 => '[8]: missing parameter type for HelloWorld->sayHello() | parameter:date',
+                    0 => '[8]: missing parameter type for HelloWorld->sayHello() | parameter:date',
+                    1 => '[16]: missing parameter type for HelloWorld->sayHello2() | parameter:date',
                 ],
             ],
             $phpCodeErrors
