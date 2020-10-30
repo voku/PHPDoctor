@@ -20,7 +20,7 @@ https://github.com/voku/PHPDoctor/releases
 ### Install via "composer require"
 
 ```shell
-composer require voku/PHPDoctor
+composer require-dev voku/phpdoctor
 ```
 
 ### Quick Start
