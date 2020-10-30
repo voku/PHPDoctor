@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.4.0 (2020-10-31)
+
+- allow to ignore reported errors via ```<phpdoctor-ignore-this-line/>```
+- sort the error output by line number
+
 ### 0.3.0 (2020-10-30)
 
 - PHP 7.2 as minimal requirement
