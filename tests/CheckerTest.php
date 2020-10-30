@@ -67,6 +67,22 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
         // --------------------------
 
+        $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy8.php');
+
+        $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
+
+        static::assertSame(
+            [
+                'PHPDoctor/tests/Dummy8.php' => [
+                    0 => '[39]: missing parameter type for voku\tests\Dummy8->foo_broken() | parameter:lall',
+                    1 => '[39]: missing return type for voku\tests\Dummy8->foo_broken()',
+                ],
+
+            ], $phpCodeErrors
+        );
+
+        // --------------------------
+
         $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy9.php');
 
         $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
@@ -96,6 +112,46 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                     '[3]: missing property type for voku\tests\SimpleClass->$foo3',
                 ],
             ],
+            $phpCodeErrors
+        );
+    }
+
+    public function testSimpleStringInputAndSkipAmbiguousTypesAsError(): void
+    {
+        $code = '<?php
+        /**
+         * (PHP 5 &gt;= 5.3.0, PHP 7, PECL intl &gt;= 1.0.2, PHP 7, PECL idn &gt;= 0.1)<br/>
+         * Convert domain name to IDNA ASCII form.
+         * @link https://php.net/manual/en/function.idn-to-ascii.php
+         * @param string $domain <p>
+         * Domain to convert. In PHP 5 must be UTF-8 encoded.
+         * If e.g. an ISO-8859-1 (aka Western Europe latin1) encoded string is
+         * passed it will be converted into an ACE encoded "xn--" string.
+         * It will not be the one you expected though!
+         * </p>
+         * @param int $options [optional] <p>
+         * Conversion options - combination of IDNA_* constants (except IDNA_ERROR_* constants).
+         * </p>
+         * @param int $variant [optional] <p>
+         * Either INTL_IDNA_VARIANT_2003 for IDNA 2003 or INTL_IDNA_VARIANT_UTS46 for UTS #46.
+         * </p>
+         * @param array &$idna_info [optional] <p>
+         * This parameter can be used only if INTL_IDNA_VARIANT_UTS46 was used for variant.
+         * In that case, it will be filled with an array with the keys \'result\',
+         * the possibly illegal result of the transformation, \'isTransitionalDifferent\',
+         * a boolean indicating whether the usage of the transitional mechanisms of UTS #46
+         * either has or would have changed the result and \'errors\',
+         * which is an int representing a bitset of the error constants IDNA_ERROR_*.
+         * </p>
+         * @return string|false The ACE encoded version of the domain name or <b>FALSE</b> on failure.
+         */
+        function idn_to_ascii($domain, $options = 0, $variant = INTL_IDNA_VARIANT_UTS46, array &$idna_info) { }
+        ';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], true);
+
+        static::assertSame(
+            [],
             $phpCodeErrors
         );
     }

@@ -15,13 +15,12 @@
         }
     ],
     "require": {
-        "php": ">=7.1",
-        "voku/simple-php-code-parser": "~0.15",
-        "ondrejmirtes/better-reflection": "~4.3",
+        "php": ">=7.2",
+        "voku/simple-php-code-parser": "~0.16",
         "symfony/console": "~3.4 || ~4.1 || ~5.0"
     },
     "require-dev": {
-        "phpunit/phpunit": "~6.0 || ~7.0"
+        "phpunit/phpunit": "~6.0 || ~7.0 || ~9.0"
     },
     "autoload": {
         "psr-4": {

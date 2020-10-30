@@ -24,7 +24,6 @@ jobs:
         - tools/ocular code-coverage:upload --format=php-clover build/logs/clover.xml
         - bash <(curl -s "https://codecov.io/bash") -Z
     - php: 7.2
-    - php: 7.1
     - php: nightly
     - name: "Coding style"
       php: 7.4

@@ -1,5 +1,11 @@
 # Changelog
 
+### 0.3.0 (2020-10-30)
+
+- PHP 7.2 as minimal requirement
+- support for modern phpdocs for "@param" and "@return"
+- update vendor libs
+
 ### 0.2.0 (2020-08-04)
 
 - allow "class-string" as string
