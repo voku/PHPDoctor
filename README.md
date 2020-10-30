@@ -1,7 +1,6 @@
 [![Build Status](https://travis-ci.com/voku/PHPDoctor.svg?branch=master)](https://travis-ci.com/voku/PHPDoctor)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/2feaf2a179a24a5fac99cbf67e72df2f)](https://www.codacy.com/manual/voku/PHPDoctor?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=voku/PHPDoctor&amp;utm_campaign=Badge_Grade)
 [![Latest Stable Version](https://poser.pugx.org/voku/PHPDoctor/v/stable)](https://packagist.org/packages/voku/PHPDoctor) 
-[![Total Downloads](https://poser.pugx.org/voku/PHPDoctor/downloads)](https://packagist.org/packages/voku/PHPDoctor) 
 [![License](https://poser.pugx.org/voku/PHPDoctor/license)](https://packagist.org/packages/voku/PHPDoctor)
 [![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.me/moelleken)
 [![Donate to this project using Patreon](https://img.shields.io/badge/patreon-donate-yellow.svg)](https://www.patreon.com/voku)
