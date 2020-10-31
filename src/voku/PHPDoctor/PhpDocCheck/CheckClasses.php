@@ -151,7 +151,10 @@ final class CheckClasses
      * @param \voku\SimplePhpParser\Model\PHPClass $class
      * @param string                               $methodName
      * @param string[][]                           $error
-     * @param array{
+     *
+     * @return string[][]
+     *
+     * @phpstan-param array{
      *     fullDescription: string,
      *     line: null|int,
      *     file: null|string,
@@ -181,8 +184,6 @@ final class CheckClasses
      *     paramsPhpDocRaw: array<string, null|string>,
      *     returnPhpDocRaw: null|string
      * } $methodInfo
-     *
-     * @return string[][]
      */
     private static function checkParameter(
         $methodInfo,
