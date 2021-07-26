@@ -118,46 +118,6 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testSimpleStringInputAndSkipAmbiguousTypesAsError(): void
-    {
-        $code = '<?php
-        /**
-         * (PHP 5 &gt;= 5.3.0, PHP 7, PECL intl &gt;= 1.0.2, PHP 7, PECL idn &gt;= 0.1)<br/>
-         * Convert domain name to IDNA ASCII form.
-         * @link https://php.net/manual/en/function.idn-to-ascii.php
-         * @param string $domain <p>
-         * Domain to convert. In PHP 5 must be UTF-8 encoded.
-         * If e.g. an ISO-8859-1 (aka Western Europe latin1) encoded string is
-         * passed it will be converted into an ACE encoded "xn--" string.
-         * It will not be the one you expected though!
-         * </p>
-         * @param int $options [optional] <p>
-         * Conversion options - combination of IDNA_* constants (except IDNA_ERROR_* constants).
-         * </p>
-         * @param int $variant [optional] <p>
-         * Either INTL_IDNA_VARIANT_2003 for IDNA 2003 or INTL_IDNA_VARIANT_UTS46 for UTS #46.
-         * </p>
-         * @param array &$idna_info [optional] <p>
-         * This parameter can be used only if INTL_IDNA_VARIANT_UTS46 was used for variant.
-         * In that case, it will be filled with an array with the keys \'result\',
-         * the possibly illegal result of the transformation, \'isTransitionalDifferent\',
-         * a boolean indicating whether the usage of the transitional mechanisms of UTS #46
-         * either has or would have changed the result and \'errors\',
-         * which is an int representing a bitset of the error constants IDNA_ERROR_*.
-         * </p>
-         * @return string|false The ACE encoded version of the domain name or <b>FALSE</b> on failure.
-         */
-        function idn_to_ascii($domain, $options = 0, $variant = INTL_IDNA_VARIANT_UTS46, array &$idna_info) { }
-        ';
-
-        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], true);
-
-        static::assertSame(
-            [],
-            $phpCodeErrors
-        );
-    }
-
     public function testMixed(): void
     {
         $code = '<?php declare(strict_types = 1);
@@ -302,7 +262,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
          * or tls:// to use an SSL or TLS client connection
          * over TCP/IP to connect to the remote host.
          * </p>
-         * @param int $port [optional] <p>
+         * @param null|int $port [optional] <p>
          * The port number.
          * </p>
          * @param int &$errno [optional] <p>
@@ -319,7 +279,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
          * @param string &$errstr [optional] <p>
          * The error message as a string.
          * </p>
-         * @param float $timeout [optional] <p>
+         * @param null|float $timeout [optional] <p>
          * The connection timeout, in seconds.
          * </p>
          * <p>

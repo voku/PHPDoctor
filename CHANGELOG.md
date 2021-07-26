@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.4.1 (2020-07-27)
+
+- update dependencies
+
 ### 0.4.0 (2020-10-31)
 
 - allow to ignore reported errors via ```<phpdoctor-ignore-this-line/>```
