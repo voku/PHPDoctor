@@ -4,7 +4,7 @@
 
 - add support for traits
 
-### 0.4.1 (2020-07-27)
+### 0.4.1 (2021-07-27)
 
 - update dependencies
 
