@@ -90,6 +90,39 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
 
         static::assertSame([], $phpCodeErrors);
+
+        // --------------------------
+
+        if (\PHP_VERSION_ID >= 80000) {
+            $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy10.php');
+
+            $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
+
+            static::assertSame(
+                [
+                    'PHPDoctor/tests/Dummy10.php' => [
+                        0  => '[9]: missing parameter type for voku\tests\Dummy10->test1() | parameter:param1',
+                        1  => '[9]: missing return type for voku\tests\Dummy10->test1()',
+                        2  => '[28]: missing return type for voku\tests\Dummy10->test11()',
+                        3  => '[35]: missing parameter type for voku\tests\Dummy10->test111() | parameter:param1',
+                        4  => '[35]: missing return type for voku\tests\Dummy10->test111()',
+                        5  => '[53]: wrong parameter type "null" in phpdoc from voku\tests\Dummy10->test121()  | parameter:param1',
+                        6  => '[53]: wrong return type "null" in phpdoc from voku\tests\Dummy10->test121()',
+                        7  => '[80]: missing parameter type "null" in phpdoc from voku\tests\Dummy10->test132() | parameter:param1',
+                        8  => '[80]: missing return type "null" in phpdoc from voku\tests\Dummy10->test132()',
+                        9  => '[89]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test14()  | parameter:param1',
+                        10 => '[89]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test14()',
+                        11 => '[98]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test141()  | parameter:param1',
+                        12 => '[98]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test141()',
+                        13 => '[107]: missing parameter type "float" in phpdoc from voku\tests\Dummy10->test142() | parameter:param1',
+                        14 => '[107]: missing return type "int" in phpdoc from voku\tests\Dummy10->test142()',
+                        15 => '[107]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test142()  | parameter:param1',
+                        16 => '[107]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test142()',
+                    ],
+                ],
+                $phpCodeErrors
+            );
+        }
     }
 
     public function testSimpleStringInput(): void
