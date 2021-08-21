@@ -96,7 +96,7 @@ final class PhpCodeChecker
             );
         }
 
-        foreach ($errors as $file => &$errorsInner) {
+        foreach ($errors as &$errorsInner) {
             \natsort($errorsInner);
             $errorsInner = \array_values($errorsInner);
         }

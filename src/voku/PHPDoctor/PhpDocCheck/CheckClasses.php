@@ -20,14 +20,14 @@ final class CheckClasses
      */
     public static function checkClasses(
         \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
-        array $access,
-        bool $skipDeprecatedMethods,
-        bool $skipMethodsWithLeadingUnderscore,
-        bool $skipAmbiguousTypesAsError,
-        bool $skipParseErrorsAsError,
-        array $error
+        array                                                $access,
+        bool                                                 $skipDeprecatedMethods,
+        bool                                                 $skipMethodsWithLeadingUnderscore,
+        bool                                                 $skipAmbiguousTypesAsError,
+        bool                                                 $skipParseErrorsAsError,
+        array                                                $error
     ): array {
-        foreach ($phpInfo->getClasses() as $class) {
+        foreach (array_merge($phpInfo->getTraits(), $phpInfo->getClasses()) as $class) {
             $error = self::checkProperties(
                 $class,
                 $access,
@@ -51,25 +51,26 @@ final class CheckClasses
     }
 
     /**
-     * @param \voku\SimplePhpParser\Model\PHPClass $class
-     * @param string[]                             $access
-     * @param bool                                 $skipDeprecatedMethods
-     * @param bool                                 $skipMethodsWithLeadingUnderscore
-     * @param bool                                 $skipAmbiguousTypesAsError
-     * @param bool                                 $skipParseErrorsAsError
-     * @param string[][]                           $error
+     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param string[]                                 $access
+     * @param bool                                     $skipDeprecatedMethods
+     * @param bool                                     $skipMethodsWithLeadingUnderscore
+     * @param bool                                     $skipAmbiguousTypesAsError
+     * @param bool                                     $skipParseErrorsAsError
+     * @param string[][]                               $error
      *
      * @return string[][]
      */
     private static function checkMethods(
-        \voku\SimplePhpParser\Model\PHPClass $class,
-        array $access,
-        bool $skipDeprecatedMethods,
-        bool $skipMethodsWithLeadingUnderscore,
-        bool $skipAmbiguousTypesAsError,
-        bool $skipParseErrorsAsError,
-        array $error
-    ): array {
+        \voku\SimplePhpParser\Model\BasePHPClass $class,
+        array                                    $access,
+        bool                                     $skipDeprecatedMethods,
+        bool                                     $skipMethodsWithLeadingUnderscore,
+        bool                                     $skipAmbiguousTypesAsError,
+        bool                                     $skipParseErrorsAsError,
+        array                                    $error
+    ): array
+    {
         foreach ($class->getMethodsInfo(
             $access,
             $skipDeprecatedMethods,
@@ -146,11 +147,11 @@ final class CheckClasses
     }
 
     /**
-     * @param array                                $methodInfo
-     * @param bool                                 $skipAmbiguousTypesAsError
-     * @param \voku\SimplePhpParser\Model\PHPClass $class
-     * @param string                               $methodName
-     * @param string[][]                           $error
+     * @param array                                    $methodInfo
+     * @param bool                                     $skipAmbiguousTypesAsError
+     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param string                                   $methodName
+     * @param string[][]                               $error
      *
      * @return string[][]
      *
@@ -188,10 +189,11 @@ final class CheckClasses
     private static function checkParameter(
         $methodInfo,
         bool $skipAmbiguousTypesAsError,
-        \voku\SimplePhpParser\Model\PHPClass $class,
+        \voku\SimplePhpParser\Model\BasePHPClass $class,
         string $methodName,
         array $error
-    ): array {
+    ): array
+    {
         foreach ($methodInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
@@ -238,21 +240,22 @@ final class CheckClasses
     }
 
     /**
-     * @param \voku\SimplePhpParser\Model\PHPClass $class
-     * @param string[]                             $access
-     * @param bool                                 $skipMethodsWithLeadingUnderscore
-     * @param bool                                 $skipAmbiguousTypesAsError
-     * @param string[][]                           $error
+     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param string[]                                 $access
+     * @param bool                                     $skipMethodsWithLeadingUnderscore
+     * @param bool                                     $skipAmbiguousTypesAsError
+     * @param string[][]                               $error
      *
      * @return string[][]
      */
     private static function checkProperties(
-        \voku\SimplePhpParser\Model\PHPClass $class,
-        array $access,
-        bool $skipMethodsWithLeadingUnderscore,
-        bool $skipAmbiguousTypesAsError,
-        array $error
-    ): array {
+        \voku\SimplePhpParser\Model\BasePHPClass $class,
+        array                                    $access,
+        bool                                     $skipMethodsWithLeadingUnderscore,
+        bool                                     $skipAmbiguousTypesAsError,
+        array                                    $error
+    ): array
+    {
         foreach ($class->getPropertiesInfo(
             $access,
             $skipMethodsWithLeadingUnderscore

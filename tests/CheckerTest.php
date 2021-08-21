@@ -122,6 +122,17 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                 ],
                 $phpCodeErrors
             );
+
+            // --------------------------
+
+            $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy11.php');
+
+            $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
+
+            static::assertSame([], $phpCodeErrors);
+
+            // --------------------------
+
         }
     }
 
