@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.5.0 (2021-08-21)
+
+- add support for traits
+
 ### 0.4.1 (2020-07-27)
 
 - update dependencies
