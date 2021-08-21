@@ -129,7 +129,15 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
             $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
 
-            static::assertSame([], $phpCodeErrors);
+            static::assertSame(
+                [
+                    'PHPDoctor/tests/Dummy11.php' => [
+                        0 => '[14]: missing parameter type "float" in phpdoc from voku\tests\Dummy11->test1() | parameter:param1',
+                        1 => '[14]: wrong parameter type "string" in phpdoc from voku\tests\Dummy11->test1()  | parameter:param1',
+                        2 => '[40]: missing parameter type for voku\tests\Dummy11->sayHello() | parameter:date',
+                    ],
+                ], $phpCodeErrors
+            );
 
             // --------------------------
 

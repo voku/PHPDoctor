@@ -33,4 +33,12 @@ trait Dummy11
     public function test3(string $param1)
     {
     }
+
+    /**
+     * @param array<mixed> $date
+     */
+    public function sayHello($date): void
+    {
+        echo 'Hello, ' . $date[0]->format('j. n. Y');
+    }
 }
