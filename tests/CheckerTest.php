@@ -155,9 +155,18 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             
             /** @var mixed */
             public $foo3;
+            
+            /**
+             * @param array<array-key,mixed> $request <phpdoctor-ignore-this-line/>
+             * @param array<array-key,mixed> $session <phpdoctor-ignore-this-line/>
+             * @param ModuleView             $view
+             */
+            public function __construct(&$request, &$session, &$view) {
+                // ... 
+            }
         }';
 
-        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public']);
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
 
         static::assertSame(
             [
