@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.5.2 (2021-12-09)
+
+- update dependencies
+- fix for phar file and "child-process" issue
+
 ### 0.5.1 (2021-10-03)
 
 - update dependencies

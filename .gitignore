@@ -15,6 +15,7 @@ build/logs/
 # php box
 /.box_dump/
 /phpdoctor.phar
+/box.phar
 
 # phive
 /tools/
