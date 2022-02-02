@@ -36,6 +36,13 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
      */
     public $foo_int;
 
+    public ?Dummy $foo_dummy;
+
+    /**
+     * @var int<-2147483648,2147483647>
+     */
+    public $lall4;
+
     /**
      * @param $foo
      *
@@ -236,6 +243,18 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
             'parsedParamTagStr' => 'foo',
             'variableName'      => [null],
         ];
+    }
+
+    /**
+     * @param int<-2147483648,2147483647> $intRange
+     *
+     * @return array
+     *
+     * @psalm-return array{intRange: int}
+     */
+    public static function withIntRange($intRange)
+    {
+        return ['int' => $intRange];
     }
 
     /**

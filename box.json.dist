@@ -1,4 +1,10 @@
 {
-    "main": "bin/phpdoctor.php",
-    "output": "phpdoctor.phar"
+  "main": "bin/phpdoctor.php",
+  "output": "phpdoctor.phar",
+  "banner": false,
+  "check-requirements": true,
+  "directories": [
+    "src"
+  ],
+  "force-autodiscovery": true
 }
