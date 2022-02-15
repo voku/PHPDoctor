@@ -29,8 +29,9 @@ final class CheckFunctions
             $skipDeprecatedFunctions,
             $skipFunctionsWithLeadingUnderscore
         ) as $functionName => $functionInfo) {
+
             if (!$skipParseErrorsAsError && $functionInfo['error']) {
-                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . $functionInfo['error'];
+                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $functionInfo['error']);
             }
 
             $error = self::checkParameter(

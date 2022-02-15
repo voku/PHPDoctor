@@ -32,6 +32,11 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
     public $foo_mixed;
 
     /**
+     * @var mixed <phpdoctor-ignore-this-line/>
+     */
+    public $foo_mixed_v2;
+
+    /**
      * @var int
      */
     public $foo_int;
@@ -277,5 +282,27 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
     public static function self($number, ?self $self)
     {
         // ...
+    }
+
+    /**
+     * @return array<int, class-string<Dummy>>
+     */
+    public static function withClassStringArray(): array
+    {
+        // ...
+
+        return [
+            0 => Dummy::class,
+        ];
+    }
+
+    /**
+     * @return array<int, class-string<\voku\tests\Dummy>>
+     */
+    public static function withClassStringArrayWithCorrectNamespace(): array
+    {
+        // ...
+
+        return [];
     }
 }
