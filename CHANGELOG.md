@@ -1,5 +1,10 @@
 # Changelog
 
+### 0.6.1 (2022-02-15)
+
+- support "<phpdoctor-ignore-this-line/>" for properties | thanks @pmagentur
+- update "voku/Simple-PHP-Code-Parser"
+
 ### 0.6.0 (2022-02-02)
 
 - clean-up / update dependencies
