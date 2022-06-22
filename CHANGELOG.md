@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.6.2 (2022-06-22)
+
+- ignore missing phpdoc from \Exception classes
+
 ### 0.6.1 (2022-02-15)
 
 - support "<phpdoctor-ignore-this-line/>" for properties | thanks @pmagentur
