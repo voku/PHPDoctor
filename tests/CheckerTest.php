@@ -138,10 +138,20 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                     ],
                 ], $phpCodeErrors
             );
-
-            // --------------------------
-
         }
+
+        // --------------------------
+
+        $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy12.php');
+
+        $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
+
+        static::assertSame(
+            [
+            ], $phpCodeErrors
+        );
+
+      // --------------------------
     }
 
     public function testSimpleStringInput(): void

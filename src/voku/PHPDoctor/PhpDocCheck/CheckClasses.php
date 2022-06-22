@@ -77,6 +77,11 @@ final class CheckClasses
             $skipMethodsWithLeadingUnderscore
         ) as $methodName => $methodInfo) {
 
+            // INFO: ignore "missing type for Exception"
+            if (is_a(($class->name ?? ''), \Exception::class, true)) {
+              return $error;
+            }
+
             if (!$skipParseErrorsAsError && $methodInfo['error']) {
                 $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $methodInfo['error']);
             }
@@ -257,6 +262,11 @@ final class CheckClasses
         array                                    $error
     ): array
     {
+        // INFO: ignore "missing type for Exception"
+        if (is_a(($class->name ?? ''), \Exception::class, true)) {
+          return $error;
+        }
+
         foreach ($class->getPropertiesInfo(
             $access,
             $skipMethodsWithLeadingUnderscore
