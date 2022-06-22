@@ -81,6 +81,8 @@ function foo_ignore($lall) {
 
 ### Building the PHAR file
 
+Prepare: https://github.com/phar-io/phive
+
 ```bash
 phive install --force-accept-unsigned humbug/box
 php tools/box compile --debug
