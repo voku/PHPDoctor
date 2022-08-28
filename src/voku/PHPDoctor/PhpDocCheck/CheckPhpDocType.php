@@ -129,8 +129,6 @@ final class CheckPhpDocType
                     $checked = false;
 
                     if (
-                        $typeFromPhpDocInput
-                        &&
                         $typeFromPhpSingle === 'string'
                         &&
                         \strpos($typeFromPhpDocInput, 'class-string') === 0
@@ -138,7 +136,6 @@ final class CheckPhpDocType
                         $checked = true;
                     }
 
-                    /** @noinspection ArgumentEqualsDefaultValueInspection */
                     if (
                         $checked === false
                         &&
@@ -164,7 +161,6 @@ final class CheckPhpDocType
                                 break;
                             }
 
-                            /** @noinspection ArgumentEqualsDefaultValueInspection */
                             if (
                                 $typeFromPhpDocTmp
                                 &&
@@ -205,22 +201,19 @@ final class CheckPhpDocType
             }
 
             foreach ($typeFromPhpDoc as $typeFromPhpDocSingle) {
-                // reset
                 /** @noinspection SuspiciousBinaryOperationInspection */
                 /** @noinspection NotOptimalIfConditionsInspection */
                 if (
+                    !\in_array($typeFromPhpDocSingle, $typeFromPhp, true)
+                    &&
                     (
                         $typeFromPhpDocSingle === 'null'
-                        &&
-                        !\in_array($typeFromPhpDocSingle, $typeFromPhp, true)
-                    )
-                    ||
-                    (
-                        $typeFromPhpDocSingle !== 'null'
-                        &&
-                        $typeFromPhpWithoutNull
-                        &&
-                        $typeFromPhpDocSingle !== $typeFromPhpWithoutNull
+                        ||
+                        (
+                            $typeFromPhpWithoutNull
+                            &&
+                            $typeFromPhpDocSingle !== $typeFromPhpWithoutNull
+                        )
                     )
                 ) {
                     // reset
@@ -275,8 +268,6 @@ final class CheckPhpDocType
 
                         // prevent false-positive results if the namespace is only imported party etc.
                         if (
-                            $typeFromPhpWithoutNull
-                            &&
                             $typeFromPhpDocSingle
                             &&
                             (
@@ -288,7 +279,6 @@ final class CheckPhpDocType
                             $checked = true;
                         }
 
-                        /** @noinspection ArgumentEqualsDefaultValueInspection */
                         if (
                             $checked === false
                             &&

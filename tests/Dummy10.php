@@ -107,4 +107,31 @@ class Dummy10
     public function test142(int|float $param1): bool|int
     {
     }
+
+    /**
+     * @param null|int $param1
+     *
+     * @return bool
+     */
+    public function test143(?int $param1): bool
+    {
+    }
+
+    /**
+     * @param null|int $param1
+     *
+     * @return bool
+     */
+    public function test144(int $param1): bool
+    {
+    }
+
+    /**
+     * @param null|float|int $param1
+     *
+     * @return bool
+     */
+    public function test145(float|int $param1): bool
+    {
+    }
 }

@@ -20,16 +20,16 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 'PHPDoctor/tests/Dummy3.php' => [
-                    0 => '[9]: missing return type for voku\tests\foo3()',
-                    1 => '[19]: missing property type for voku\tests\Dummy3->$foo',
-                    2 => '[19]: missing property type for voku\tests\Dummy3->$foo_mixed',
-                    3 => '[56]: missing parameter type for voku\tests\Dummy3->lall() | parameter:foo',
-                    4 => '[56]: missing return type for voku\tests\Dummy3->lall()',
-                    5 => '[66]: missing return type "null" in phpdoc from voku\tests\Dummy3->lall2()',
-                    6 => '[76]: wrong return type "null" in phpdoc from voku\tests\Dummy3->lall2_1()',
-                    7 => '[86]: wrong return type "string" in phpdoc from voku\tests\Dummy3->lall3()',
-                    8 => '[96]: wrong parameter type "string" in phpdoc from voku\tests\Dummy3->lall3_1()  | parameter:foo',
-                    9 => '[116]: missing return type "Generator" in phpdoc from voku\tests\Dummy3->lall3_2_1()',
+                    0  => '[9]: missing return type for voku\tests\foo3()',
+                    1  => '[19]: missing property type for voku\tests\Dummy3->$foo',
+                    2  => '[19]: missing property type for voku\tests\Dummy3->$foo_mixed',
+                    3  => '[56]: missing parameter type for voku\tests\Dummy3->lall() | parameter:foo',
+                    4  => '[56]: missing return type for voku\tests\Dummy3->lall()',
+                    5  => '[66]: missing return type "null" in phpdoc from voku\tests\Dummy3->lall2()',
+                    6  => '[76]: wrong return type "null" in phpdoc from voku\tests\Dummy3->lall2_1()',
+                    7  => '[86]: wrong return type "string" in phpdoc from voku\tests\Dummy3->lall3()',
+                    8  => '[96]: wrong parameter type "string" in phpdoc from voku\tests\Dummy3->lall3_1()  | parameter:foo',
+                    9  => '[116]: missing return type "Generator" in phpdoc from voku\tests\Dummy3->lall3_2_1()',
                     10 => '[166]: missing parameter type "null" in phpdoc from voku\tests\Dummy3->lall8() | parameter:case',
                 ],
             ],
@@ -110,14 +110,10 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                         6  => '[53]: wrong return type "null" in phpdoc from voku\tests\Dummy10->test121()',
                         7  => '[80]: missing parameter type "null" in phpdoc from voku\tests\Dummy10->test132() | parameter:param1',
                         8  => '[80]: missing return type "null" in phpdoc from voku\tests\Dummy10->test132()',
-                        9  => '[89]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test14()  | parameter:param1',
-                        10 => '[89]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test14()',
-                        11 => '[98]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test141()  | parameter:param1',
-                        12 => '[98]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test141()',
-                        13 => '[107]: missing parameter type "float" in phpdoc from voku\tests\Dummy10->test142() | parameter:param1',
-                        14 => '[107]: missing return type "int" in phpdoc from voku\tests\Dummy10->test142()',
-                        15 => '[107]: wrong parameter type "int" in phpdoc from voku\tests\Dummy10->test142()  | parameter:param1',
-                        16 => '[107]: wrong return type "bool" in phpdoc from voku\tests\Dummy10->test142()',
+                        9  => '[107]: missing parameter type "float" in phpdoc from voku\tests\Dummy10->test142() | parameter:param1',
+                        10 => '[107]: missing return type "int" in phpdoc from voku\tests\Dummy10->test142()',
+                        11 => '[125]: wrong parameter type "null" in phpdoc from voku\tests\Dummy10->test144()  | parameter:param1',
+                        12 => '[134]: wrong parameter type "null" in phpdoc from voku\tests\Dummy10->test145()  | parameter:param1',
                     ],
                 ],
                 $phpCodeErrors
@@ -151,7 +147,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             ], $phpCodeErrors
         );
 
-      // --------------------------
+        // --------------------------
     }
 
     public function testSimpleStringInput(): void
@@ -366,26 +362,10 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
          * fwrite, fclose, and
          * feof). If the call fails, it will return false
          */
-        function fsockopen ($hostname, $port = null, &$errno = null, &$errstr = null, $timeout = null) { /** ... */ };';
-
+        function fsockopen_test($hostname, $port = null, &$errno = null, &$errstr = null, $timeout = null) { /** ... */ };';
         $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], true);
 
-        if (\PHP_VERSION_ID <= 70199) {
-            static::assertSame(
-                [
-                    '' => [
-                        '[44]: missing parameter type for fsockopen() | parameter:errno',
-                        '[44]: missing parameter type for fsockopen() | parameter:errstr',
-                    ],
-                ],
-                $phpCodeErrors
-            );
-        } else {
-            static::assertSame(
-                [],
-                $phpCodeErrors
-            );
-        }
+        static::assertSame([], $phpCodeErrors);
     }
 
     /**
@@ -404,7 +384,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         $helper = [];
         foreach ($result as $key => $value) {
             if (\is_string($key)) {
-                $key = (string) \str_replace($pathReplace, '', $key);
+                $key = (string)\str_replace($pathReplace, '', $key);
             }
 
             if (\is_array($value)) {
