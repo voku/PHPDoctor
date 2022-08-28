@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.6.3 (2022-08-29)
+
+- fix "checkPhpDocType" checks for php docs vs. php types
+
 ### 0.6.2 (2022-06-22)
 
 - ignore missing phpdoc from \Exception classes
