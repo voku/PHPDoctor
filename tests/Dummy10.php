@@ -134,4 +134,11 @@ class Dummy10
     public function test145(float|int $param1): bool
     {
     }
+
+    /**
+     * @return false|int
+     */
+    public function test146(float|int $param1): int|bool
+    {
+    }
 }

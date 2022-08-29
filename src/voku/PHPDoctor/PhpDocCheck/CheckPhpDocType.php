@@ -33,9 +33,11 @@ final class CheckPhpDocType
         string $propertyName = null
     ): array {
         // init
-        $typeFromPhpWithoutNull = null;
+        $typeFromPhpWithoutNullArray = [];
         $typeFromPhpDocInput = $types['typeFromPhpDocSimple'];
         $typeFromPhpInput = $types['type'];
+
+        $typeFromPhpDocInputArray = \explode('|', $typeFromPhpDocInput ?? '');
 
         if (
             isset($types['typeFromDefaultValue'])
@@ -54,13 +56,11 @@ final class CheckPhpDocType
         };
         $typeFromPhpDoc = \array_unique(
             \array_filter(
-                \explode('|', $typeFromPhpDocInput ?? ''),
+                $typeFromPhpDocInputArray,
                 $removeEmptyStringFunc
             )
         );
-        /** @noinspection AlterInForeachInspection */
         foreach ($typeFromPhpDoc as $keyTmp => $typeFromPhpDocSingle) {
-            /** @noinspection InArrayCanBeUsedInspection */
             if (
                 $typeFromPhpDocSingle === '$this'
                 ||
@@ -81,9 +81,8 @@ final class CheckPhpDocType
                 $removeEmptyStringFunc
             )
         );
-        /** @noinspection AlterInForeachInspection */
+
         foreach ($typeFromPhp as $keyTmp => $typeFromPhpSingle) {
-            /** @noinspection InArrayCanBeUsedInspection */
             if (
                 $typeFromPhpSingle === '$this'
                 ||
@@ -99,7 +98,7 @@ final class CheckPhpDocType
             }
 
             if ($typeFromPhpSingle && \strtolower($typeFromPhpSingle) !== 'null') {
-                $typeFromPhpWithoutNull = $typeFromPhp[$keyTmp];
+                $typeFromPhpWithoutNullArray[$keyTmp] = $typeFromPhp[$keyTmp];
             }
         }
 
@@ -112,7 +111,6 @@ final class CheckPhpDocType
                 // reset
                 $checked = null;
 
-                /** @noinspection SuspiciousBinaryOperationInspection */
                 if (
                     $typeFromPhpSingle
                     &&
@@ -129,9 +127,21 @@ final class CheckPhpDocType
                     $checked = false;
 
                     if (
+                        $typeFromPhpSingle === 'bool'
+                        &&
+                        (
+                            \in_array('true', $typeFromPhpDocInputArray, true)
+                            ||
+                            \in_array('false', $typeFromPhpDocInputArray, true)
+                        )
+                    ) {
+                        $checked = true;
+                    }
+
+                    if (
                         $typeFromPhpSingle === 'string'
                         &&
-                        \strpos($typeFromPhpDocInput, 'class-string') === 0
+                        \in_array('class-string', $typeFromPhpDocInputArray, true)
                     ) {
                         $checked = true;
                     }
@@ -201,26 +211,12 @@ final class CheckPhpDocType
             }
 
             foreach ($typeFromPhpDoc as $typeFromPhpDocSingle) {
-                /** @noinspection SuspiciousBinaryOperationInspection */
-                /** @noinspection NotOptimalIfConditionsInspection */
-                if (
-                    !\in_array($typeFromPhpDocSingle, $typeFromPhp, true)
-                    &&
-                    (
-                        $typeFromPhpDocSingle === 'null'
-                        ||
-                        (
-                            $typeFromPhpWithoutNull
-                            &&
-                            $typeFromPhpDocSingle !== $typeFromPhpWithoutNull
-                        )
-                    )
-                ) {
+                if (!\in_array($typeFromPhpDocSingle, $typeFromPhp, true)) {
                     // reset
                     $checked = null;
 
                     if (
-                        $typeFromPhpWithoutNull === 'bool'
+                        \in_array('bool', $typeFromPhpWithoutNullArray, true)
                         &&
                         (
                             $typeFromPhpDocSingle === 'true'
@@ -232,11 +228,9 @@ final class CheckPhpDocType
                     }
 
                     if (
-                        $typeFromPhpWithoutNull
-                        &&
                         $typeFromPhpDocSingle
                         &&
-                        $typeFromPhpWithoutNull === 'string'
+                        \in_array('string', $typeFromPhpWithoutNullArray, true)
                         &&
                         \strpos($typeFromPhpDocSingle, 'class-string') === 0
                     ) {
@@ -246,12 +240,12 @@ final class CheckPhpDocType
                     if (
                         $typeFromPhpDocSingle
                         &&
-                        $typeFromPhpWithoutNull
+                        $typeFromPhpWithoutNullArray !== []
                         &&
                         (
-                            $typeFromPhpWithoutNull === 'array'
+                            \in_array('array', $typeFromPhpWithoutNullArray, true)
                             ||
-                            \ltrim($typeFromPhpWithoutNull, '\\') === 'Generator'
+                            \in_array('Generator', $typeFromPhpWithoutNullArray, true)
                         )
                         &&
                         \strpos($typeFromPhpDocSingle, '[]') !== false
@@ -262,7 +256,7 @@ final class CheckPhpDocType
                     if (
                         !$checked
                         &&
-                        $typeFromPhpWithoutNull
+                        $typeFromPhpWithoutNullArray !== []
                     ) {
                         $checked = false;
 
@@ -271,38 +265,40 @@ final class CheckPhpDocType
                             $typeFromPhpDocSingle
                             &&
                             (
-                                $typeFromPhpDocSingle === $typeFromPhpWithoutNull
+                                $typeFromPhpDocSingle === implode('|', $typeFromPhpWithoutNullArray)
                                 ||
-                                \strpos($typeFromPhpWithoutNull, $typeFromPhpDocSingle) !== false
+                                \in_array($typeFromPhpDocSingle, $typeFromPhpWithoutNullArray, true)
                             )
                         ) {
                             $checked = true;
                         }
 
-                        if (
-                            $checked === false
-                            &&
-                            $typeFromPhpDocSingle
-                            &&
-                            (
-                                \class_exists($typeFromPhpWithoutNull, true)
-                                ||
-                                \interface_exists($typeFromPhpWithoutNull, true)
-                            )
-                            &&
-                            (
-                                \class_exists($typeFromPhpDocSingle, true)
-                                ||
-                                \interface_exists($typeFromPhpDocSingle, true)
-                            )
-                        ) {
-                            $typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocSingle);
+                        foreach ($typeFromPhpWithoutNullArray as $typeFromPhpWithoutNullSingle) {
                             if (
-                                $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpWithoutNull)
-                                ||
-                                $typeFromPhpDocReflectionClass->implementsInterface($typeFromPhpWithoutNull)
+                                $checked === false
+                                &&
+                                $typeFromPhpDocSingle
+                                &&
+                                (
+                                    \class_exists($typeFromPhpWithoutNullSingle, true)
+                                    ||
+                                    \interface_exists($typeFromPhpWithoutNullSingle, true)
+                                )
+                                &&
+                                (
+                                    \class_exists($typeFromPhpDocSingle, true)
+                                    ||
+                                    \interface_exists($typeFromPhpDocSingle, true)
+                                )
                             ) {
-                                $checked = true;
+                                $typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocSingle);
+                                if (
+                                    $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpWithoutNullSingle)
+                                    ||
+                                    $typeFromPhpDocReflectionClass->implementsInterface($typeFromPhpWithoutNullSingle)
+                                ) {
+                                    $checked = true;
+                                }
                             }
                         }
                     }

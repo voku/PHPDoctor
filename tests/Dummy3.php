@@ -201,7 +201,7 @@ final class Dummy3 implements DummyInterface, DummyInterface2, DummyInterface3
     /**
      * @param class-string $className
      *
-     * @return DummyInterface
+     * @return \voku\tests\DummyInterface
      *
      * @noinspection PhpDocSignatureInspection
      */
