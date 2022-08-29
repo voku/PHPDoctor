@@ -84,7 +84,7 @@ function foo_ignore($lall) {
 Prepare: https://github.com/phar-io/phive
 
 ```bash
-phive install --force-accept-unsigned humbug/box
+phive install humbug/box
 php tools/box compile --debug
 ```
 
