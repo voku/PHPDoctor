@@ -18,6 +18,7 @@ use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 final class PhpDoctorCommand extends Command
 {
     public const COMMAND_NAME = 'analyse';
+    public const ALIASES = ['analyze'];
 
     /**
      * @var string[]
@@ -38,6 +39,7 @@ final class PhpDoctorCommand extends Command
     {
         $this
             ->setName(self::COMMAND_NAME)
+            ->setAliases(self::ALIASES)
             ->setDescription('Check PHP files or directories for missing types.')
             ->setDefinition(
                 new InputDefinition(
