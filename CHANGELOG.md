@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.6.5 (2022-10.31)
+
+- fix for PHP8 -> "mixed" as native type always wins
+
 ### 0.6.4 (2022-08-29)
 
 - fix "checkPhpDocType" checks for php docs vs. php types v2
