@@ -10,24 +10,24 @@ use voku\SimplePhpParser\Parsers\Helper\Utils;
 final class CheckPhpDocType
 {
     /**
-     * @param array       $types
-     * @param array       $fileInfo
-     * @param string[][]  $error
-     * @param string      $name
-     * @param string|null $className
-     * @param string|null $paramName
-     * @param string|null $propertyName
+     * @param array                                                                                                                                                                                                                                                                                                                                                                                          $types
+     * @param array                                                                                                                                                                                                                                                                                                                                                                                          $fileInfo
+     * @param string[][]                                                                                                                                                                                                                                                                                                                                                                                     $errors
+     * @param string                                                                                                                                                                                                                                                                                                                                                                                         $name
+     * @param string|null                                                                                                                                                                                                                                                                                                                                                                                    $className
+     * @param string|null                                                                                                                                                                                                                                                                                                                                                                                    $paramName
+     * @param string|null                                                                                                                                                                                                                                                                                                                                                                                    $propertyName
      *
      * @psalm-param array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null}|array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null, typeFromDefaultValue: null|string} $types
-     * @psalm-param array{line: null|int, file: null|string} $fileInfo
+     * @psalm-param array{line: null|int, file: null|string}                                                                                                                                                                                                                                                                                                                                                 $fileInfo
      *
      * @return string[][]
      */
     public static function checkPhpDocType(
-        array $types,
-        array $fileInfo,
+        array  $types,
+        array  $fileInfo,
         string $name,
-        array $error,
+        array  $errors,
         string $className = null,
         string $paramName = null,
         string $propertyName = null
@@ -36,6 +36,15 @@ final class CheckPhpDocType
         $typeFromPhpWithoutNullArray = [];
         $typeFromPhpDocInput = $types['typeFromPhpDocSimple'];
         $typeFromPhpInput = $types['type'];
+
+        // native "mixed" always wins
+        if (
+            $typeFromPhpInput === 'null|mixed'
+            ||
+            $typeFromPhpDocInput === 'mixed'
+        ) {
+            return $errors;
+        }
 
         $typeFromPhpDocInputArray = \explode('|', $typeFromPhpDocInput ?? '');
 
@@ -198,13 +207,18 @@ final class CheckPhpDocType
                         }
                     }
 
+                    // native "mixed" always wins
+                    if ($typeFromPhpSingle === 'mixed') {
+                        $checked = true;
+                    }
+
                     if (!$checked) {
                         if ($propertyName) {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing property type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name . ' | property:' . $propertyName;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing property type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name . ' | property:' . $propertyName;
                         } elseif ($paramName) {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing parameter type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name . ' | parameter:' . $paramName;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing parameter type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name . ' | parameter:' . $paramName;
                         } else {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing return type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: missing return type "' . $typeFromPhpSingle . '" in phpdoc from ' . $name;
                         }
                     }
                 }
@@ -303,19 +317,24 @@ final class CheckPhpDocType
                         }
                     }
 
+                    // native "mixed" always wins
+                    if (\in_array('mixed', $typeFromPhpWithoutNullArray, true)) {
+                        $checked = true;
+                    }
+
                     if (!$checked) {
                         if ($propertyName) {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong property type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name . '  | property:' . $propertyName;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong property type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name . '  | property:' . $propertyName;
                         } elseif ($paramName) {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong parameter type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name . '  | parameter:' . $paramName;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong parameter type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name . '  | parameter:' . $paramName;
                         } else {
-                            $error[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong return type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name;
+                            $errors[$fileInfo['file'] ?? ''][] = '[' . ($fileInfo['line'] ?? '?') . ']: wrong return type "' . ($typeFromPhpDocSingle ?? '?') . '" in phpdoc from ' . $name;
                         }
                     }
                 }
             }
         }
 
-        return $error;
+        return $errors;
     }
 }

@@ -141,4 +141,11 @@ class Dummy10
     public function test146(float|int $param1): int|bool
     {
     }
+
+    /**
+     * @return false|int
+     */
+    public function test147(float|int $param1): mixed
+    {
+    }
 }
