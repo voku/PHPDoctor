@@ -95,6 +95,12 @@ final class PhpDoctorCommand extends Command
                 InputOption::VALUE_OPTIONAL,
                 'Skip some paths via regex e.g. "#/vendor/|/other/.*/path/#i"',
                 '#/vendor/|/tests/#i'
+            )->addOption(
+                'file-extensions',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                'Check different file extensions e.g. ".php|.php4|.php5|.inc"',
+                '.php'
             );
     }
 
@@ -147,6 +153,9 @@ final class PhpDoctorCommand extends Command
 
         $pathExcludeRegex = $input->getOption('path-exclude-regex');
         \assert(\is_string($pathExcludeRegex));
+
+        $fileExtensions = $input->getOption('file-extensions');
+        \assert(\is_string($fileExtensions));
 
         $formatter = $output->getFormatter();
         $formatter->setStyle('file', new OutputFormatterStyle('default', null, ['bold']));

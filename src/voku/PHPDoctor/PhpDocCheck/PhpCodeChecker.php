@@ -56,7 +56,8 @@ final class PhpCodeChecker
         bool $skipFunctionsWithLeadingUnderscore = false,
         bool $skipParseErrorsAsError = true,
         array $autoloaderProjectPaths = [],
-        array $pathExcludeRegex = []
+        array $pathExcludeRegex = [],
+        array $fileExtensions = ['.php']
     ): array {
         // init
         $errors = [];
@@ -69,7 +70,8 @@ final class PhpCodeChecker
             $phpInfo = PhpCodeParser::getPhpFiles(
                 $pathItem,
                 $autoloaderProjectPaths,
-                $pathExcludeRegex
+                $pathExcludeRegex,
+                $fileExtensions
             );
 
             if (!$skipParseErrorsAsError) {
