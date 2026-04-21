@@ -437,6 +437,507 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame([], \array_filter($phpCodeErrors));
     }
 
+    // =========================================================================
+    // PHP 8 feature coverage – expanded tests
+    // =========================================================================
+
+    /**
+     * When #[\Deprecated] AND @deprecated are both present no error should be
+     * emitted (the phpdoc already satisfies the requirement).
+     */
+    public function testDeprecatedAttributeWithExistingPhpdocProducesNoError(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @deprecated use NewFunction instead
+         */
+        #[\Deprecated]
+        function already_tagged_fn(string $v): string { return $v; }
+
+        /**
+         * @deprecated
+         */
+        #[\Deprecated]
+        class AlreadyTaggedClass
+        {
+            /**
+             * @deprecated
+             */
+            #[\Deprecated]
+            public function alreadyTaggedMethod(string $v): string { return $v; }
+        }
+
+        /**
+         * @deprecated
+         */
+        #[\Deprecated]
+        interface AlreadyTaggedInterface
+        {
+            public function run(string $v): string;
+        }
+
+        /**
+         * @deprecated
+         */
+        #[\Deprecated]
+        enum AlreadyTaggedEnum: string
+        {
+            case A = "a";
+        }
+
+        /**
+         * @deprecated
+         */
+        #[\Deprecated]
+        trait AlreadyTaggedTrait
+        {
+            public function doSomething(string $v): string { return $v; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * An attribute unrelated to \Deprecated must NOT trigger the missing-
+     * @deprecated-tag check.
+     */
+    public function testUnrelatedAttributeDoesNotTriggerDeprecatedCheck(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        #[\AllowDynamicProperties]
+        class MarkedClass
+        {
+            public function run(string $v): string { return $v; }
+        }
+
+        #[SomeOtherAttribute]
+        interface MarkedInterface
+        {
+            public function run(string $v): string;
+        }
+
+        #[SomeOtherAttribute]
+        function marked_function(string $v): string { return $v; }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public', 'protected', 'private'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * #[\Override] on a method that is declared in a grandparent class is valid.
+     * This exercises the recursive `classOrParentsHasMethod` path.
+     */
+    public function testPhp8OverrideDetectionViaGrandparentClass(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class GrandBase
+        {
+            public function rootMethod(int $x): int { return $x; }
+        }
+
+        class MidClass extends GrandBase {}
+
+        class LeafClass extends MidClass
+        {
+            #[\Override]
+            public function rootMethod(int $x): int { return $x * 2; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * An interface re-declaring a method from a parent interface with
+     * #[\Override] is valid. This exercises `interfaceOrParentsHasMethod`.
+     */
+    public function testPhp8OverrideDetectionInterfaceExtendsInterface(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface ParentIface
+        {
+            public function execute(string $v): string;
+        }
+
+        interface ChildIface extends ParentIface
+        {
+            #[\Override]
+            public function execute(string $v): string;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * An enum method that #[\Override]s a method from an implemented interface
+     * is valid. This exercises the PHPEnum branch of `hasParentOrInterfaceMethod`.
+     */
+    public function testPhp8OverrideDetectionEnumImplementsInterface(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface Labelable
+        {
+            public function label(): string;
+        }
+
+        enum Status: string implements Labelable
+        {
+            case Active = "active";
+
+            #[\Override]
+            public function label(): string { return $this->value; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * Interface methods whose phpdoc @return type does not match the native
+     * return type must produce an error, the same way class methods do.
+     */
+    public function testInterfaceMethodWrongReturnTypeInPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface WrongDocInterface
+        {
+            /**
+             * @return string
+             */
+            public function getNumber(): int;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\WrongDocInterface->getNumber()', $errors[0]);
+    }
+
+    /**
+     * Interface methods whose phpdoc @param type does not match the native
+     * parameter type must produce an error, the same way class methods do.
+     */
+    public function testInterfaceMethodWrongParamTypeInPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface WrongParamInterface
+        {
+            /**
+             * @param string $val
+             */
+            public function process(int $val): void;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\WrongParamInterface->process()', $errors[0]);
+        static::assertStringContainsString('parameter:val', $errors[0]);
+    }
+
+    /**
+     * Enum methods whose phpdoc @return type does not match the native
+     * return type must produce an error.
+     */
+    public function testEnumMethodWrongReturnTypeInPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        enum WrongDocEnum: string
+        {
+            case A = "a";
+
+            /**
+             * @return string
+             */
+            public function getInt(): int { return 1; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\WrongDocEnum->getInt()', $errors[0]);
+    }
+
+    /**
+     * Enum methods whose phpdoc @param type does not match the native
+     * parameter type must produce an error.
+     */
+    public function testEnumMethodWrongParamTypeInPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        enum WrongParamEnum: string
+        {
+            case A = "a";
+
+            /**
+             * @param string $val
+             */
+            public function process(int $val): void {}
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\WrongParamEnum->process()', $errors[0]);
+        static::assertStringContainsString('parameter:val', $errors[0]);
+    }
+
+    /**
+     * With skipDeprecatedMethods=true, methods that carry @deprecated phpdoc
+     * must be skipped in interfaces and enums, not just in classes.
+     */
+    public function testSkipDeprecatedMethodsInInterfaceAndEnum(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface IWithDeprecated
+        {
+            /**
+             * @deprecated
+             */
+            public function oldMethod($foo);
+        }
+
+        enum EWithDeprecated: string
+        {
+            case A = "a";
+
+            /**
+             * @deprecated
+             */
+            public function oldEnumMethod($foo): string { return $this->value; }
+        }';
+
+        // Without skipDeprecatedMethods: errors expected because of missing types
+        $errorsDefault = \array_filter(PhpCodeChecker::checkFromString($code, ['public']));
+        static::assertNotEmpty($errorsDefault);
+
+        // With skipDeprecatedMethods: deprecated methods are not checked → no errors
+        $errorsSkipped = PhpCodeChecker::checkFromString($code, ['public'], false, true);
+        static::assertSame([], \array_filter($errorsSkipped));
+    }
+
+    /**
+     * With skipFunctionsWithLeadingUnderscore=true, methods whose names start
+     * with `_` must be skipped in interfaces and enums.
+     */
+    public function testSkipLeadingUnderscoreMethodsInInterfaceAndEnum(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface IWithUnderscore
+        {
+            public function _internal($foo): void;
+            public function publicMethod(string $v): string;
+        }
+
+        enum EWithUnderscore: string
+        {
+            case A = "a";
+            public function _helper($x): string { return $this->value; }
+            public function realMethod(string $v): string { return $v; }
+        }';
+
+        // Without skip: _internal and _helper have missing param-type errors
+        $errorsDefault = \array_filter(PhpCodeChecker::checkFromString($code, ['public']));
+        static::assertNotEmpty($errorsDefault);
+
+        // With skipFunctionsWithLeadingUnderscore=true: underscore methods ignored, others are fine
+        $errorsSkipped = PhpCodeChecker::checkFromString($code, ['public'], false, false, true);
+        static::assertSame([], \array_filter($errorsSkipped));
+    }
+
+    /**
+     * Access-level filtering works for enums: private methods are not flagged
+     * when only public access is checked.
+     */
+    public function testAccessFilterForEnumMethods(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        enum AccessFilterEnum: string
+        {
+            case A = "a";
+
+            // Private method with missing types – should be invisible with access=[public]
+            private function privateHelper($x) {}
+
+            public function publicMethod(string $v): string { return $v; }
+        }';
+
+        $errorsPublicOnly = PhpCodeChecker::checkFromString($code, ['public']);
+        static::assertSame([], \array_filter($errorsPublicOnly));
+
+        // When private is also requested, the missing-type errors surface
+        $errorsAll = \array_filter(PhpCodeChecker::checkFromString($code, ['public', 'private']));
+        static::assertNotEmpty($errorsAll);
+    }
+
+    /**
+     * The <phpdoctor-ignore-this-line/> marker in an interface method's phpdoc
+     * must suppress the type error for that parameter.
+     */
+    public function testPhpdoctorIgnoreTagInInterfaceMethod(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface IgnorableInterface
+        {
+            /**
+             * @param mixed $foo <phpdoctor-ignore-this-line/>
+             */
+            public function run($foo): string;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public']);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * An interface method decorated with #[\Deprecated] but lacking @deprecated
+     * in its phpdoc must produce a missing-@deprecated-tag error.
+     */
+    public function testInterfaceMethodDeprecatedAttributeWithoutPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface InterfaceWithDeprecatedMethod
+        {
+            #[\Deprecated]
+            public function legacyMethod(string $v): string;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\InterfaceWithDeprecatedMethod->legacyMethod()', $errors[0]);
+        static::assertStringContainsString('missing @deprecated tag in phpdoc', $errors[0]);
+    }
+
+    /**
+     * A trait method decorated with #[\Deprecated] but lacking @deprecated
+     * in its phpdoc must produce a missing-@deprecated-tag error.
+     */
+    public function testTraitMethodDeprecatedAttributeWithoutPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        trait TraitWithDeprecatedMethod
+        {
+            #[\Deprecated]
+            public function legacyMethod(string $v): string { return $v; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('voku\tests\TraitWithDeprecatedMethod->legacyMethod()', $errors[0]);
+        static::assertStringContainsString('missing @deprecated tag in phpdoc', $errors[0]);
+    }
+
+    /**
+     * A static interface method must use the `::` separator (not `->`) in every
+     * error message that references it.
+     */
+    public function testStaticInterfaceMethodUsesScopeResolutionInErrorMessage(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface StaticInterface
+        {
+            public static function create($value);
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+        // Expect at least the missing-parameter-type error
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('StaticInterface::create()', $errors[0]);
+    }
+
+    /**
+     * Multiple independent issues inside the same interface are each reported
+     * individually and attributed to the correct method.
+     */
+    public function testMultipleIssuesInSameInterfaceAreReportedIndependently(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        interface MultiIssueInterface
+        {
+            public function methodA($x): string;
+            public function methodB(int $x);
+            public function methodC(int $x): string;
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+
+        static::assertCount(2, $errors);
+
+        $joined = \implode(' | ', $errors);
+        static::assertStringContainsString('methodA', $joined);
+        static::assertStringContainsString('methodB', $joined);
+        static::assertStringNotContainsString('methodC', $joined);
+    }
+
+    /**
+     * Multiple independent issues inside the same enum are each reported
+     * individually and attributed to the correct method.
+     */
+    public function testMultipleIssuesInSameEnumAreReportedIndependently(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        enum MultiIssueEnum: string
+        {
+            case X = "x";
+
+            public function methodA($x): string { return $this->value; }
+            public function methodB(int $x): string { return $this->value; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+
+        // methodA has missing param type; methodB is fully typed
+        static::assertCount(1, $errors);
+        static::assertStringContainsString('MultiIssueEnum->methodA', $errors[0]);
+    }
+
+    // =========================================================================
+    // End PHP 8 feature coverage – expanded tests
+    // =========================================================================
+
     public function testSimpleStringInputInheritdocExtended(): void
     {
         $code = '<?php
