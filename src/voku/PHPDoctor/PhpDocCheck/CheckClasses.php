@@ -38,6 +38,7 @@ final class CheckClasses
 
             $error = self::checkMethods(
                 $class,
+                $phpInfo,
                 $access,
                 $skipDeprecatedMethods,
                 $skipMethodsWithLeadingUnderscore,
@@ -52,6 +53,7 @@ final class CheckClasses
 
     /**
      * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
+     * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
      * @param string[]                                 $access
      * @param bool                                     $skipDeprecatedMethods
      * @param bool                                     $skipMethodsWithLeadingUnderscore
@@ -63,6 +65,7 @@ final class CheckClasses
      */
     private static function checkMethods(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
         array                                    $access,
         bool                                     $skipDeprecatedMethods,
         bool                                     $skipMethodsWithLeadingUnderscore,
@@ -85,6 +88,14 @@ final class CheckClasses
             if (!$skipParseErrorsAsError && $methodInfo['error']) {
                 $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $methodInfo['error']);
             }
+
+            $error = self::checkInvalidOverrideUsage(
+                $methodInfo,
+                $methodName,
+                $class,
+                $phpInfo,
+                $error
+            );
 
             $error = self::checkParameter(
                 $methodInfo,
@@ -150,6 +161,129 @@ final class CheckClasses
         }
 
         return $error;
+    }
+
+    /**
+     * @param array                                    $methodInfo
+     * @param string                                   $methodName
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
+     * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+     * @param string[][]                               $error
+     *
+     * @return string[][]
+     *
+     * @phpstan-param array{
+     *     line: null|int,
+     *     file: null|string,
+     *     is_static: null|bool
+     * } $methodInfo
+     */
+    private static function checkInvalidOverrideUsage(
+        array $methodInfo,
+        string $methodName,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
+        array $error
+    ): array {
+        $method = $class->methods[$methodName] ?? null;
+        if (
+            !($method instanceof \voku\SimplePhpParser\Model\PHPMethod)
+            ||
+            $method->is_override !== true
+        ) {
+            return $error;
+        }
+
+        if (self::hasParentOrInterfaceMethod($class, $methodName, $phpInfo)) {
+            return $error;
+        }
+
+        $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: invalid #[\Override] usage for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+
+        return $error;
+    }
+
+    private static function hasParentOrInterfaceMethod(
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        string $methodName,
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+    ): bool {
+        if ($class instanceof \voku\SimplePhpParser\Model\PHPClass) {
+            if (
+                $class->parentClass
+                &&
+                self::classOrParentsHasMethod($class->parentClass, $methodName, $phpInfo)
+            ) {
+                return true;
+            }
+
+            foreach ($class->interfaces as $interfaceName) {
+                $interface = $phpInfo->getInterface($interfaceName);
+                if (
+                    $interface
+                    &&
+                    isset($interface->methods[$methodName])
+                ) {
+                    return true;
+                }
+
+                try {
+                    if (
+                        \interface_exists($interfaceName, true)
+                        &&
+                        \method_exists($interfaceName, $methodName)
+                    ) {
+                        return true;
+                    }
+                } catch (\Throwable $e) {
+                    // nothing
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * @param class-string $className
+     */
+    private static function classOrParentsHasMethod(
+        string $className,
+        string $methodName,
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+    ): bool {
+        $class = $phpInfo->getClass($className);
+        if (
+            $class
+            &&
+            isset($class->methods[$methodName])
+        ) {
+            return true;
+        }
+
+        if (
+            $class
+            &&
+            $class->parentClass
+            &&
+            self::classOrParentsHasMethod($class->parentClass, $methodName, $phpInfo)
+        ) {
+            return true;
+        }
+
+        try {
+            if (
+                \class_exists($className, true)
+                &&
+                \method_exists($className, $methodName)
+            ) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // nothing
+        }
+
+        return false;
     }
 
     /**

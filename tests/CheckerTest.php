@@ -229,6 +229,37 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testPhp8OverrideDetection(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+        
+        interface OverrideInterface {
+            public function validInterfaceMethod(int $foo): void;
+        }
+        
+        class OverrideBase {
+            public function validBaseMethod(int $foo): void {}
+        }
+        
+        class OverrideChild extends OverrideBase implements OverrideInterface {
+            #[\Override]
+            public function validBaseMethod(int $foo): void {}
+        
+            #[\Override]
+            public function validInterfaceMethod(int $foo): void {}
+        
+            #[\Override]
+            public function invalidOverrideMethod(int $foo): void {}
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+
+        static::assertCount(1, $phpCodeErrors[''] ?? []);
+        static::assertStringContainsString('invalid #[\Override] usage', $phpCodeErrors[''][0]);
+        static::assertStringContainsString('OverrideChild->invalidOverrideMethod()', $phpCodeErrors[''][0]);
+    }
+
     public function testSimpleStringInputInheritdocExtended(): void
     {
         $code = '<?php
