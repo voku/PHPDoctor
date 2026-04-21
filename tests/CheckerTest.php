@@ -256,8 +256,9 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         $phpCodeErrors = PhpCodeChecker::checkFromString($code);
 
         static::assertCount(1, $phpCodeErrors[''] ?? []);
-        static::assertStringContainsString('invalid #[\Override] usage', $phpCodeErrors[''][0]);
-        static::assertStringContainsString('OverrideChild->invalidOverrideMethod()', $phpCodeErrors[''][0]);
+        $error = $phpCodeErrors[''][0] ?? '';
+        static::assertStringContainsString('invalid #[\Override] usage', $error);
+        static::assertStringContainsString('OverrideChild->invalidOverrideMethod()', $error);
     }
 
     public function testSimpleStringInputInheritdocExtended(): void
