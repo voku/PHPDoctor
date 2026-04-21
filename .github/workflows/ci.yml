@@ -10,6 +10,8 @@ jobs:
   tests:
     name: "Tests – PHP ${{ matrix.php }}"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     strategy:
       fail-fast: false
@@ -49,6 +51,8 @@ jobs:
   static-analysis:
     name: "Static analysis (PHPStan)"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
@@ -81,6 +85,8 @@ jobs:
   self-check:
     name: "PHPDoctor self-check"
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Checkout
