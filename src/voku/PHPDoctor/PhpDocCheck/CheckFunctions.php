@@ -25,10 +25,19 @@ final class CheckFunctions
         bool $skipParseErrorsAsError,
         array $error
     ): array {
+        $functions = $phpInfo->getFunctions();
+
         foreach ($phpInfo->getFunctionsInfo(
             $skipDeprecatedFunctions,
             $skipFunctionsWithLeadingUnderscore
         ) as $functionName => $functionInfo) {
+            $function = $functions[$functionName] ?? null;
+            if ($function instanceof \voku\SimplePhpParser\Model\PHPFunction) {
+                $error = self::checkDeprecatedAttributeOnFunction(
+                    $function,
+                    $error
+                );
+            }
 
             if (!$skipParseErrorsAsError && $functionInfo['error']) {
                 $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $functionInfo['error']);
@@ -81,6 +90,23 @@ final class CheckFunctions
                 $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: missing return type for ' . $functionName . '()';
             }
         }
+
+        return $error;
+    }
+
+    private static function checkDeprecatedAttributeOnFunction(
+        \voku\SimplePhpParser\Model\PHPFunction $function,
+        array $error
+    ): array {
+        if (
+            !self::hasAttributeNamed($function->attributes, 'Deprecated')
+            ||
+            $function->hasDeprecatedTag
+        ) {
+            return $error;
+        }
+
+        $error[$function->file ?? ''][] = '[' . ($function->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $function->name . '()';
 
         return $error;
     }
@@ -179,5 +205,32 @@ final class CheckFunctions
         }
 
         return $error;
+    }
+
+    /**
+     * @param array<int, object> $attributes
+     */
+    private static function hasAttributeNamed(array $attributes, string $attributeName): bool
+    {
+        $attributeName = \strtolower($attributeName);
+
+        foreach ($attributes as $attribute) {
+            $name = $attribute->name ?? null;
+            if (!\is_string($name)) {
+                continue;
+            }
+
+            $name = \ltrim($name, '\\');
+            $shortName = \strrchr($name, '\\');
+            if ($shortName !== false) {
+                $name = \substr($shortName, 1);
+            }
+
+            if (\strtolower($name) === $attributeName) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

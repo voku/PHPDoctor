@@ -261,6 +261,182 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertStringContainsString('OverrideChild->invalidOverrideMethod()', $error);
     }
 
+    public function testPhp8InterfaceAndEnumDetection(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+        
+        interface BrokenInterface {
+            public function missingParamType($foo): string;
+            public function missingReturnType(int $foo);
+        }
+        
+        enum BrokenEnum: string {
+            case Ready = "ready";
+        
+            public function missingParamType($foo): string
+            {
+                return $this->value;
+            }
+        
+            public function missingReturnType(int $foo)
+            {
+                return $this->value;
+            }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+
+        static::assertCount(4, $errors);
+        static::assertContains('[' . '5]: missing parameter type for voku\tests\BrokenInterface->missingParamType() | parameter:foo', $errors);
+        static::assertContains('[' . '6]: missing return type for voku\tests\BrokenInterface->missingReturnType()', $errors);
+        static::assertContains('[' . '12]: missing parameter type for voku\tests\BrokenEnum->missingParamType() | parameter:foo', $errors);
+        static::assertContains('[' . '17]: missing return type for voku\tests\BrokenEnum->missingReturnType()', $errors);
+    }
+
+    public function testPhp8DeprecatedAttributeNeedsPhpdoc(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+        
+        #[\Deprecated]
+        function old_function(string $value): string
+        {
+            return $value;
+        }
+        
+        #[\Deprecated]
+        interface OldInterface
+        {
+            public function execute(string $value): string;
+        }
+        
+        #[\Deprecated]
+        trait OldTrait
+        {
+            public function traitMethod(string $value): string
+            {
+                return $value;
+            }
+        }
+        
+        #[\Deprecated]
+        enum OldEnum: string
+        {
+            case Legacy = "legacy";
+        }
+        
+        #[\Deprecated]
+        class OldClass
+        {
+            #[\Deprecated]
+            public function oldMethod(string $value): string
+            {
+                return $value;
+            }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code);
+        $errors = $phpCodeErrors[''] ?? [];
+
+        static::assertCount(6, $errors);
+        static::assertContains('[' . '4]: missing @deprecated tag in phpdoc from voku\tests\old_function()', $errors);
+        static::assertContains('[' . '10]: missing @deprecated tag in phpdoc from voku\tests\OldInterface', $errors);
+        static::assertContains('[' . '16]: missing @deprecated tag in phpdoc from voku\tests\OldTrait', $errors);
+        static::assertContains('[' . '25]: missing @deprecated tag in phpdoc from voku\tests\OldEnum', $errors);
+        static::assertContains('[' . '31]: missing @deprecated tag in phpdoc from voku\tests\OldClass', $errors);
+        static::assertContains('[' . '34]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()', $errors);
+    }
+
+    public function testPhp8ModernFeatureSupportSmoke(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+        
+        #[App\Contract]
+        interface ModernInterface
+        {
+            public function run(string $input): string;
+        }
+        
+        trait ModernTrait
+        {
+            #[App\Marker]
+            public string $name = "";
+        
+            public function traitMethod(int $count): int
+            {
+                return $count;
+            }
+        }
+        
+        enum ModernEnum: string
+        {
+            case Active = "active";
+        
+            #[App\Marker]
+            public const string LABEL = "label";
+        
+            #[App\Marker]
+            public function label(): string
+            {
+                return self::LABEL;
+            }
+        }
+        
+        #[App\Marker]
+        final class ModernClass implements ModernInterface
+        {
+            use ModernTrait;
+        
+            #[App\Marker]
+            public const string NAME = "service";
+        
+            public function __construct(
+                #[App\Marker]
+                public readonly string $id
+            ) {
+            }
+        
+            #[\Override]
+            public function run(string $input): string
+            {
+                return $input;
+            }
+        
+            #[App\Marker]
+            public function api(#[App\Marker] string $value): string
+            {
+                return $value;
+            }
+        }
+        
+        #[App\Marker]
+        function modern_function(#[App\Marker] string $value): string
+        {
+            return $value;
+        }
+        
+        class Hooked
+        {
+            public string $fullName {
+                get => $this->value;
+                set (string $value) {
+                    $this->value = $value;
+                }
+            }
+        
+            public private(set) string $email = "";
+        
+            private string $value = "";
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public', 'protected', 'private'], false, false, false, false);
+
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
     public function testSimpleStringInputInheritdocExtended(): void
     {
         $code = '<?php
@@ -297,12 +473,13 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     {
         $code = '<?php
         namespace voku\tests;
-        interface SimpleInterface {
-            /**
-             * @param string $foo
-             */
-            public function lall($foo)
-        }
+         interface SimpleInterface {
+             /**
+              * @param string $foo
+              * @return int[]
+              */
+              public function lall($foo)
+         }
         class SimpleClass implements SimpleInterface {
             /**
              * {@inheritdoc}

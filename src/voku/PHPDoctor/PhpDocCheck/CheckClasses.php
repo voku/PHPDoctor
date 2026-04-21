@@ -28,6 +28,11 @@ final class CheckClasses
         array                                                $error
     ): array {
         foreach (array_merge($phpInfo->getTraits(), $phpInfo->getClasses()) as $class) {
+            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+                $class,
+                $error
+            );
+
             $error = self::checkProperties(
                 $class,
                 $access,
@@ -38,6 +43,42 @@ final class CheckClasses
 
             $error = self::checkMethods(
                 $class,
+                $phpInfo,
+                $access,
+                $skipDeprecatedMethods,
+                $skipMethodsWithLeadingUnderscore,
+                $skipAmbiguousTypesAsError,
+                $skipParseErrorsAsError,
+                $error
+            );
+        }
+
+        foreach ($phpInfo->getInterfaces() as $interface) {
+            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+                $interface,
+                $error
+            );
+
+            $error = self::checkMethods(
+                $interface,
+                $phpInfo,
+                $access,
+                $skipDeprecatedMethods,
+                $skipMethodsWithLeadingUnderscore,
+                $skipAmbiguousTypesAsError,
+                $skipParseErrorsAsError,
+                $error
+            );
+        }
+
+        foreach ($phpInfo->getEnums() as $enum) {
+            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+                $enum,
+                $error
+            );
+
+            $error = self::checkMethods(
+                $enum,
                 $phpInfo,
                 $access,
                 $skipDeprecatedMethods,
@@ -64,7 +105,7 @@ final class CheckClasses
      * @return string[][]
      */
     private static function checkMethods(
-        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
         array                                    $access,
         bool                                     $skipDeprecatedMethods,
@@ -74,7 +115,8 @@ final class CheckClasses
         array                                    $error
     ): array
     {
-        foreach ($class->getMethodsInfo(
+        foreach (self::getMethodsInfoFromElement(
+            $class,
             $access,
             $skipDeprecatedMethods,
             $skipMethodsWithLeadingUnderscore
@@ -87,6 +129,15 @@ final class CheckClasses
 
             if (!$skipParseErrorsAsError && $methodInfo['error']) {
                 $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $methodInfo['error']);
+            }
+
+            $method = $class->methods[$methodName] ?? null;
+            if ($method instanceof \voku\SimplePhpParser\Model\PHPMethod) {
+                $error = self::checkDeprecatedAttributeOnMethod(
+                    $method,
+                    ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
+                    $error
+                );
             }
 
             $error = self::checkInvalidOverrideUsage(
@@ -164,6 +215,105 @@ final class CheckClasses
     }
 
     /**
+     * @return array<string, array{
+     *     fullDescription: string,
+     *     line: null|int,
+     *     file: null|string,
+     *     error: string,
+     *     is_deprecated: bool,
+     *     is_static: null|bool,
+     *     is_meta: bool,
+     *     is_internal: bool,
+     *     is_removed: bool,
+     *     paramsTypes: array<string, array{
+     *         type?: null|string,
+     *         typeFromPhpDoc?: null|string,
+     *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocSimple?: null|string,
+     *         typeFromPhpDocMaybeWithComment?: null|string,
+     *         typeFromDefaultValue?: null|string
+     *     }>,
+     *     returnTypes: array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string
+     *     },
+     *     paramsPhpDocRaw: array<string, null|string>,
+     *     returnPhpDocRaw: null|string
+     * }>
+     */
+    private static function getMethodsInfoFromElement(
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
+        array $access,
+        bool $skipDeprecatedMethods,
+        bool $skipMethodsWithLeadingUnderscore
+    ): array {
+        $allInfo = [];
+
+        foreach ($class->methods as $method) {
+            if (!\in_array($method->access, $access, true)) {
+                continue;
+            }
+
+            if ($skipDeprecatedMethods && $method->hasDeprecatedTag) {
+                continue;
+            }
+
+            if ($skipMethodsWithLeadingUnderscore && \strpos($method->name, '_') === 0) {
+                continue;
+            }
+
+            $paramsTypes = [];
+            foreach ($method->parameters as $tagParam) {
+                $paramsTypes[$tagParam->name]['type'] = $tagParam->type;
+                $paramsTypes[$tagParam->name]['typeFromPhpDocMaybeWithComment'] = $tagParam->typeFromPhpDocMaybeWithComment;
+                $paramsTypes[$tagParam->name]['typeFromPhpDoc'] = $tagParam->typeFromPhpDoc;
+                $paramsTypes[$tagParam->name]['typeFromPhpDocSimple'] = $tagParam->typeFromPhpDocSimple;
+                $paramsTypes[$tagParam->name]['typeFromPhpDocExtended'] = $tagParam->typeFromPhpDocExtended;
+                $paramsTypes[$tagParam->name]['typeFromDefaultValue'] = $tagParam->typeFromDefaultValue;
+            }
+
+            $returnTypes = [];
+            $returnTypes['type'] = $method->returnType;
+            $returnTypes['typeFromPhpDocMaybeWithComment'] = $method->returnTypeFromPhpDocMaybeWithComment;
+            $returnTypes['typeFromPhpDoc'] = $method->returnTypeFromPhpDoc;
+            $returnTypes['typeFromPhpDocSimple'] = $method->returnTypeFromPhpDocSimple;
+            $returnTypes['typeFromPhpDocExtended'] = $method->returnTypeFromPhpDocExtended;
+
+            $paramsPhpDocRaw = [];
+            foreach ($method->parameters as $tagParam) {
+                $paramsPhpDocRaw[$tagParam->name] = $tagParam->phpDocRaw;
+            }
+
+            $infoTmp = [];
+            $infoTmp['fullDescription'] = \trim($method->summary . "\n\n" . $method->description);
+            $infoTmp['paramsTypes'] = $paramsTypes;
+            $infoTmp['returnTypes'] = $returnTypes;
+            $infoTmp['paramsPhpDocRaw'] = $paramsPhpDocRaw;
+            $infoTmp['returnPhpDocRaw'] = $method->returnPhpDocRaw;
+            $infoTmp['line'] = $method->line ?? $class->line;
+            $infoTmp['file'] = $method->file ?? $class->file;
+            $infoTmp['error'] = \implode("\n", $method->parseError);
+            foreach ($method->parameters as $parameter) {
+                $infoTmp['error'] .= ($infoTmp['error'] ? "\n" : '') . \implode("\n", $parameter->parseError);
+            }
+            $infoTmp['is_deprecated'] = $method->hasDeprecatedTag;
+            $infoTmp['is_static'] = $method->is_static;
+            $infoTmp['is_meta'] = $method->hasMetaTag;
+            $infoTmp['is_internal'] = $method->hasInternalTag;
+            $infoTmp['is_removed'] = $method->hasRemovedTag;
+
+            $allInfo[$method->name] = $infoTmp;
+        }
+
+        \asort($allInfo);
+
+        return $allInfo;
+    }
+
+    /**
      * @param array                                    $methodInfo
      * @param string                                   $methodName
      * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
@@ -181,7 +331,7 @@ final class CheckClasses
     private static function checkInvalidOverrideUsage(
         array $methodInfo,
         string $methodName,
-        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
         array $error
     ): array {
@@ -204,7 +354,7 @@ final class CheckClasses
     }
 
     private static function hasParentOrInterfaceMethod(
-        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         string $methodName,
         \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
     ): bool {
@@ -237,6 +387,22 @@ final class CheckClasses
                     }
                 } catch (\Throwable $e) {
                     // nothing
+                }
+            }
+        }
+
+        if ($class instanceof \voku\SimplePhpParser\Model\PHPInterface) {
+            foreach ($class->parentInterfaces as $interfaceName) {
+                if (self::interfaceOrParentsHasMethod($interfaceName, $methodName, $phpInfo)) {
+                    return true;
+                }
+            }
+        }
+
+        if ($class instanceof \voku\SimplePhpParser\Model\PHPEnum) {
+            foreach ($class->interfaces as $interfaceName) {
+                if (self::interfaceOrParentsHasMethod($interfaceName, $methodName, $phpInfo)) {
+                    return true;
                 }
             }
         }
@@ -287,6 +453,108 @@ final class CheckClasses
     }
 
     /**
+     * @param class-string $interfaceName
+     */
+    private static function interfaceOrParentsHasMethod(
+        string $interfaceName,
+        string $methodName,
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+    ): bool {
+        $interface = $phpInfo->getInterface($interfaceName);
+        if (
+            $interface
+            &&
+            isset($interface->methods[$methodName])
+        ) {
+            return true;
+        }
+
+        if ($interface) {
+            foreach ($interface->parentInterfaces as $parentInterfaceName) {
+                if (self::interfaceOrParentsHasMethod($parentInterfaceName, $methodName, $phpInfo)) {
+                    return true;
+                }
+            }
+        }
+
+        try {
+            if (
+                \interface_exists($interfaceName, true)
+                &&
+                \method_exists($interfaceName, $methodName)
+            ) {
+                return true;
+            }
+        } catch (\Throwable $e) {
+            // nothing
+        }
+
+        return false;
+    }
+
+    private static function checkDeprecatedAttributeOnClassLikeElement(
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
+        array $error
+    ): array {
+        if (
+            !self::hasAttributeNamed($class->attributes, 'Deprecated')
+            ||
+            $class->hasDeprecatedTag
+        ) {
+            return $error;
+        }
+
+        $error[$class->file ?? ''][] = '[' . ($class->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . ($class->name ?? '?');
+
+        return $error;
+    }
+
+    private static function checkDeprecatedAttributeOnMethod(
+        \voku\SimplePhpParser\Model\PHPMethod $method,
+        string $methodDisplayName,
+        array $error
+    ): array {
+        if (
+            !self::hasAttributeNamed($method->attributes, 'Deprecated')
+            ||
+            $method->hasDeprecatedTag
+        ) {
+            return $error;
+        }
+
+        $error[$method->file ?? ''][] = '[' . ($method->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $methodDisplayName;
+
+        return $error;
+    }
+
+    /**
+     * @param array<int, object> $attributes
+     */
+    private static function hasAttributeNamed(array $attributes, string $attributeName): bool
+    {
+        $attributeName = \strtolower($attributeName);
+
+        foreach ($attributes as $attribute) {
+            $name = $attribute->name ?? null;
+            if (!\is_string($name)) {
+                continue;
+            }
+
+            $name = \ltrim($name, '\\');
+            $shortName = \strrchr($name, '\\');
+            if ($shortName !== false) {
+                $name = \substr($shortName, 1);
+            }
+
+            if (\strtolower($name) === $attributeName) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * @param array                                    $methodInfo
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
@@ -329,7 +597,7 @@ final class CheckClasses
     private static function checkParameter(
         $methodInfo,
         bool $skipAmbiguousTypesAsError,
-        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         string $methodName,
         array $error
     ): array
