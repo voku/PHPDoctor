@@ -288,6 +288,10 @@ final class CheckPhpDocType
                         }
 
                         foreach ($typeFromPhpWithoutNullArray as $typeFromPhpWithoutNullSingle) {
+                            if (!\is_string($typeFromPhpWithoutNullSingle)) {
+                                continue;
+                            }
+
                             if (
                                 $checked === false
                                 &&

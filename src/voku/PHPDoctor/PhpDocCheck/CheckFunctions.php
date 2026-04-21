@@ -103,12 +103,12 @@ final class CheckFunctions
      *     is_internal: bool,
      *     is_removed: bool,
      *     paramsTypes: array<string, array{
-     *         type: null|string,
-     *         typeFromPhpDoc: null|string,
-     *         typeFromPhpDocExtended: null|string,
-     *         typeFromPhpDocSimple: null|string,
-     *         typeFromPhpDocMaybeWithComment: null|string,
-     *         typeFromDefaultValue: null|string
+     *         type?: null|string,
+     *         typeFromPhpDoc?: null|string,
+     *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocSimple?: null|string,
+     *         typeFromPhpDocMaybeWithComment?: null|string,
+     *         typeFromDefaultValue?: null|string
      *     }>,
      *     returnTypes: array{
      *         type: null|string,
@@ -154,9 +154,18 @@ final class CheckFunctions
             }
 
             if ($typeFound) {
-                if ($paramTypes['typeFromPhpDocSimple'] && $paramTypes['type']) {
+                if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                    $paramTypesNormalized = $paramTypes + [
+                        'type' => null,
+                        'typeFromPhpDoc' => null,
+                        'typeFromPhpDocExtended' => null,
+                        'typeFromPhpDocSimple' => null,
+                        'typeFromPhpDocMaybeWithComment' => null,
+                        'typeFromDefaultValue' => null,
+                    ];
+
                     $error = CheckPhpDocType::checkPhpDocType(
-                        $paramTypes,
+                        $paramTypesNormalized,
                         $functionInfo,
                         $functionName . '()',
                         $error,
