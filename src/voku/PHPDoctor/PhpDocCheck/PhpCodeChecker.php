@@ -45,6 +45,7 @@ final class PhpCodeChecker
      * @param bool            $skipParseErrorsAsError
      * @param string[]        $autoloaderProjectPaths
      * @param string[]        $pathExcludeRegex
+     * @param string[]        $fileExtensions
      *
      * @return string[][]
      */

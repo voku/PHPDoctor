@@ -12,3 +12,6 @@ parameters:
         - '#undefined property PhpParser\\Node\\Expr#'
         - '#BasePHPElement::getFQN\(\) should return class-string but returns string#'
         - '#Unable to resolve the template type .* in call to function Amp\\Promise\\.*#'
+        # Pre-existing: Symfony Console getArgument/getOption return mixed; narrowing via assert() is not tracked by PHPStan
+        - path: src/voku/PHPDoctor/CliCommand/PhpDoctorCommand.php
+          identifier: argument.type
