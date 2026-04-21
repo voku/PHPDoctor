@@ -473,13 +473,13 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     {
         $code = '<?php
         namespace voku\tests;
-         interface SimpleInterface {
-             /**
-              * @param string $foo
-              * @return int[]
-              */
-              public function lall($foo)
-         }
+        interface SimpleInterface {
+            /**
+             * @param string $foo
+             * @return int[]
+             */
+            public function lall($foo)
+        }
         class SimpleClass implements SimpleInterface {
             /**
              * {@inheritdoc}

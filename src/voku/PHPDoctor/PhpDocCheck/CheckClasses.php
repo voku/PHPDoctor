@@ -93,7 +93,7 @@ final class CheckClasses
     }
 
     /**
-     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class
      * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
      * @param string[]                                 $access
      * @param bool                                     $skipDeprecatedMethods
@@ -250,9 +250,71 @@ final class CheckClasses
         bool $skipDeprecatedMethods,
         bool $skipMethodsWithLeadingUnderscore
     ): array {
+        if (
+            $class instanceof \voku\SimplePhpParser\Model\PHPClass
+            ||
+            $class instanceof \voku\SimplePhpParser\Model\PHPTrait
+        ) {
+            return $class->getMethodsInfo(
+                $access,
+                $skipDeprecatedMethods,
+                $skipMethodsWithLeadingUnderscore
+            );
+        }
+
+        return self::buildMethodInfoList(
+            $class->methods,
+            $class->line,
+            $class->file,
+            $access,
+            $skipDeprecatedMethods,
+            $skipMethodsWithLeadingUnderscore
+        );
+    }
+
+    /**
+     * @param array<string, \voku\SimplePhpParser\Model\PHPMethod> $methods
+     *
+     * @return array<string, array{
+     *     fullDescription: string,
+     *     line: null|int,
+     *     file: null|string,
+     *     error: string,
+     *     is_deprecated: bool,
+     *     is_static: null|bool,
+     *     is_meta: bool,
+     *     is_internal: bool,
+     *     is_removed: bool,
+     *     paramsTypes: array<string, array{
+     *         type?: null|string,
+     *         typeFromPhpDoc?: null|string,
+     *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocSimple?: null|string,
+     *         typeFromPhpDocMaybeWithComment?: null|string,
+     *         typeFromDefaultValue?: null|string
+     *     }>,
+     *     returnTypes: array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string
+     *     },
+     *     paramsPhpDocRaw: array<string, null|string>,
+     *     returnPhpDocRaw: null|string
+     * }>
+     */
+    private static function buildMethodInfoList(
+        array $methods,
+        ?int $fallbackLine,
+        ?string $fallbackFile,
+        array $access,
+        bool $skipDeprecatedMethods,
+        bool $skipMethodsWithLeadingUnderscore
+    ): array {
         $allInfo = [];
 
-        foreach ($class->methods as $method) {
+        foreach ($methods as $method) {
             if (!\in_array($method->access, $access, true)) {
                 continue;
             }
@@ -265,47 +327,11 @@ final class CheckClasses
                 continue;
             }
 
-            $paramsTypes = [];
-            foreach ($method->parameters as $tagParam) {
-                $paramsTypes[$tagParam->name]['type'] = $tagParam->type;
-                $paramsTypes[$tagParam->name]['typeFromPhpDocMaybeWithComment'] = $tagParam->typeFromPhpDocMaybeWithComment;
-                $paramsTypes[$tagParam->name]['typeFromPhpDoc'] = $tagParam->typeFromPhpDoc;
-                $paramsTypes[$tagParam->name]['typeFromPhpDocSimple'] = $tagParam->typeFromPhpDocSimple;
-                $paramsTypes[$tagParam->name]['typeFromPhpDocExtended'] = $tagParam->typeFromPhpDocExtended;
-                $paramsTypes[$tagParam->name]['typeFromDefaultValue'] = $tagParam->typeFromDefaultValue;
-            }
-
-            $returnTypes = [];
-            $returnTypes['type'] = $method->returnType;
-            $returnTypes['typeFromPhpDocMaybeWithComment'] = $method->returnTypeFromPhpDocMaybeWithComment;
-            $returnTypes['typeFromPhpDoc'] = $method->returnTypeFromPhpDoc;
-            $returnTypes['typeFromPhpDocSimple'] = $method->returnTypeFromPhpDocSimple;
-            $returnTypes['typeFromPhpDocExtended'] = $method->returnTypeFromPhpDocExtended;
-
-            $paramsPhpDocRaw = [];
-            foreach ($method->parameters as $tagParam) {
-                $paramsPhpDocRaw[$tagParam->name] = $tagParam->phpDocRaw;
-            }
-
-            $infoTmp = [];
-            $infoTmp['fullDescription'] = \trim($method->summary . "\n\n" . $method->description);
-            $infoTmp['paramsTypes'] = $paramsTypes;
-            $infoTmp['returnTypes'] = $returnTypes;
-            $infoTmp['paramsPhpDocRaw'] = $paramsPhpDocRaw;
-            $infoTmp['returnPhpDocRaw'] = $method->returnPhpDocRaw;
-            $infoTmp['line'] = $method->line ?? $class->line;
-            $infoTmp['file'] = $method->file ?? $class->file;
-            $infoTmp['error'] = \implode("\n", $method->parseError);
-            foreach ($method->parameters as $parameter) {
-                $infoTmp['error'] .= ($infoTmp['error'] ? "\n" : '') . \implode("\n", $parameter->parseError);
-            }
-            $infoTmp['is_deprecated'] = $method->hasDeprecatedTag;
-            $infoTmp['is_static'] = $method->is_static;
-            $infoTmp['is_meta'] = $method->hasMetaTag;
-            $infoTmp['is_internal'] = $method->hasInternalTag;
-            $infoTmp['is_removed'] = $method->hasRemovedTag;
-
-            $allInfo[$method->name] = $infoTmp;
+            $allInfo[$method->name] = self::buildMethodInfo(
+                $method,
+                $fallbackLine,
+                $fallbackFile
+            );
         }
 
         \asort($allInfo);
@@ -314,9 +340,87 @@ final class CheckClasses
     }
 
     /**
+     * @return array{
+     *     fullDescription: string,
+     *     line: null|int,
+     *     file: null|string,
+     *     error: string,
+     *     is_deprecated: bool,
+     *     is_static: null|bool,
+     *     is_meta: bool,
+     *     is_internal: bool,
+     *     is_removed: bool,
+     *     paramsTypes: array<string, array{
+     *         type?: null|string,
+     *         typeFromPhpDoc?: null|string,
+     *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocSimple?: null|string,
+     *         typeFromPhpDocMaybeWithComment?: null|string,
+     *         typeFromDefaultValue?: null|string
+     *     }>,
+     *     returnTypes: array{
+     *         type: null|string,
+     *         typeFromPhpDoc: null|string,
+     *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocSimple: null|string,
+     *         typeFromPhpDocMaybeWithComment: null|string
+     *     },
+     *     paramsPhpDocRaw: array<string, null|string>,
+     *     returnPhpDocRaw: null|string
+     * }
+     */
+    private static function buildMethodInfo(
+        \voku\SimplePhpParser\Model\PHPMethod $method,
+        ?int $fallbackLine,
+        ?string $fallbackFile
+    ): array {
+        $paramsTypes = [];
+        foreach ($method->parameters as $tagParam) {
+            $paramsTypes[$tagParam->name]['type'] = $tagParam->type;
+            $paramsTypes[$tagParam->name]['typeFromPhpDocMaybeWithComment'] = $tagParam->typeFromPhpDocMaybeWithComment;
+            $paramsTypes[$tagParam->name]['typeFromPhpDoc'] = $tagParam->typeFromPhpDoc;
+            $paramsTypes[$tagParam->name]['typeFromPhpDocSimple'] = $tagParam->typeFromPhpDocSimple;
+            $paramsTypes[$tagParam->name]['typeFromPhpDocExtended'] = $tagParam->typeFromPhpDocExtended;
+            $paramsTypes[$tagParam->name]['typeFromDefaultValue'] = $tagParam->typeFromDefaultValue;
+        }
+
+        $returnTypes = [];
+        $returnTypes['type'] = $method->returnType;
+        $returnTypes['typeFromPhpDocMaybeWithComment'] = $method->returnTypeFromPhpDocMaybeWithComment;
+        $returnTypes['typeFromPhpDoc'] = $method->returnTypeFromPhpDoc;
+        $returnTypes['typeFromPhpDocSimple'] = $method->returnTypeFromPhpDocSimple;
+        $returnTypes['typeFromPhpDocExtended'] = $method->returnTypeFromPhpDocExtended;
+
+        $paramsPhpDocRaw = [];
+        foreach ($method->parameters as $tagParam) {
+            $paramsPhpDocRaw[$tagParam->name] = $tagParam->phpDocRaw;
+        }
+
+        $info = [];
+        $info['fullDescription'] = \trim($method->summary . "\n\n" . $method->description);
+        $info['paramsTypes'] = $paramsTypes;
+        $info['returnTypes'] = $returnTypes;
+        $info['paramsPhpDocRaw'] = $paramsPhpDocRaw;
+        $info['returnPhpDocRaw'] = $method->returnPhpDocRaw;
+        $info['line'] = $method->line ?? $fallbackLine;
+        $info['file'] = $method->file ?? $fallbackFile;
+        $info['error'] = \implode("\n", $method->parseError);
+        foreach ($method->parameters as $parameter) {
+            $info['error'] .= ($info['error'] ? "\n" : '') . \implode("\n", $parameter->parseError);
+        }
+        $info['is_deprecated'] = $method->hasDeprecatedTag;
+        $info['is_static'] = $method->is_static;
+        $info['is_meta'] = $method->hasMetaTag;
+        $info['is_internal'] = $method->hasInternalTag;
+        $info['is_removed'] = $method->hasRemovedTag;
+
+        return $info;
+    }
+
+    /**
      * @param array                                    $methodInfo
      * @param string                                   $methodName
-     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class
      * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
      * @param string[][]                               $error
      *
@@ -497,7 +601,7 @@ final class CheckClasses
         array $error
     ): array {
         if (
-            !self::hasAttributeNamed($class->attributes, 'Deprecated')
+            !AttributeHelper::hasAttributeNamed($class->attributes, 'Deprecated')
             ||
             $class->hasDeprecatedTag
         ) {
@@ -515,7 +619,7 @@ final class CheckClasses
         array $error
     ): array {
         if (
-            !self::hasAttributeNamed($method->attributes, 'Deprecated')
+            !AttributeHelper::hasAttributeNamed($method->attributes, 'Deprecated')
             ||
             $method->hasDeprecatedTag
         ) {
@@ -528,36 +632,9 @@ final class CheckClasses
     }
 
     /**
-     * @param array<int, object> $attributes
-     */
-    private static function hasAttributeNamed(array $attributes, string $attributeName): bool
-    {
-        $attributeName = \strtolower($attributeName);
-
-        foreach ($attributes as $attribute) {
-            $name = $attribute->name ?? null;
-            if (!\is_string($name)) {
-                continue;
-            }
-
-            $name = \ltrim($name, '\\');
-            $shortName = \strrchr($name, '\\');
-            if ($shortName !== false) {
-                $name = \substr($shortName, 1);
-            }
-
-            if (\strtolower($name) === $attributeName) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
      * @param array                                    $methodInfo
      * @param bool                                     $skipAmbiguousTypesAsError
-     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class
      * @param string                                   $methodName
      * @param string[][]                               $error
      *
