@@ -51,7 +51,7 @@ final class CheckClasses
     }
 
     /**
-     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
      * @param string[]                                 $access
      * @param bool                                     $skipDeprecatedMethods
      * @param bool                                     $skipMethodsWithLeadingUnderscore
@@ -62,7 +62,7 @@ final class CheckClasses
      * @return string[][]
      */
     private static function checkMethods(
-        \voku\SimplePhpParser\Model\BasePHPClass $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
         array                                    $access,
         bool                                     $skipDeprecatedMethods,
         bool                                     $skipMethodsWithLeadingUnderscore,
@@ -155,7 +155,7 @@ final class CheckClasses
     /**
      * @param array                                    $methodInfo
      * @param bool                                     $skipAmbiguousTypesAsError
-     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
      * @param string                                   $methodName
      * @param string[][]                               $error
      *
@@ -173,12 +173,12 @@ final class CheckClasses
      *     is_removed: bool,
      *     paramsTypes: array<string,
      *         array{
-     *           type: null|string,
-     *           typeFromPhpDoc: null|string,
-     *           typeFromPhpDocExtended: null|string,
-     *           typeFromPhpDocSimple: null|string,
-     *           typeFromPhpDocMaybeWithComment: null|string,
-     *           typeFromDefaultValue: null|string
+     *           type?: null|string,
+     *           typeFromPhpDoc?: null|string,
+     *           typeFromPhpDocExtended?: null|string,
+     *           typeFromPhpDocSimple?: null|string,
+     *           typeFromPhpDocMaybeWithComment?: null|string,
+     *           typeFromDefaultValue?: null|string
      *         }
      *     >,
      *     returnTypes: array{
@@ -195,7 +195,7 @@ final class CheckClasses
     private static function checkParameter(
         $methodInfo,
         bool $skipAmbiguousTypesAsError,
-        \voku\SimplePhpParser\Model\BasePHPClass $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
         string $methodName,
         array $error
     ): array
@@ -227,9 +227,18 @@ final class CheckClasses
             }
 
             if ($typeFound) {
-                if ($paramTypes['typeFromPhpDocSimple'] && $paramTypes['type']) {
+                if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                    $paramTypesNormalized = $paramTypes + [
+                        'type' => null,
+                        'typeFromPhpDoc' => null,
+                        'typeFromPhpDocExtended' => null,
+                        'typeFromPhpDocSimple' => null,
+                        'typeFromPhpDocMaybeWithComment' => null,
+                        'typeFromDefaultValue' => null,
+                    ];
+
                     $error = CheckPhpDocType::checkPhpDocType(
-                        $paramTypes,
+                        $paramTypesNormalized,
                         $methodInfo,
                         ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
                         $error,
@@ -246,7 +255,7 @@ final class CheckClasses
     }
 
     /**
-     * @param \voku\SimplePhpParser\Model\BasePHPClass $class
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class
      * @param string[]                                 $access
      * @param bool                                     $skipMethodsWithLeadingUnderscore
      * @param bool                                     $skipAmbiguousTypesAsError
@@ -255,7 +264,7 @@ final class CheckClasses
      * @return string[][]
      */
     private static function checkProperties(
-        \voku\SimplePhpParser\Model\BasePHPClass $class,
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
         array                                    $access,
         bool                                     $skipMethodsWithLeadingUnderscore,
         bool                                     $skipAmbiguousTypesAsError,
@@ -274,10 +283,20 @@ final class CheckClasses
             // reset
             $typeFound = false;
 
+            $propertyPhpDocRaw = $class->properties[$propertyName]->phpDocRaw ?? null;
+
             if (
-                $propertyTypes['typeFromPhpDocMaybeWithComment']
-                &&
-                \strpos($propertyTypes['typeFromPhpDocMaybeWithComment'], '<phpdoctor-ignore-this-line/>') !== false
+                (
+                    $propertyTypes['typeFromPhpDocMaybeWithComment']
+                    &&
+                    \strpos($propertyTypes['typeFromPhpDocMaybeWithComment'], '<phpdoctor-ignore-this-line/>') !== false
+                )
+                ||
+                (
+                    $propertyPhpDocRaw
+                    &&
+                    \strpos($propertyPhpDocRaw, '<phpdoctor-ignore-this-line/>') !== false
+                )
             ) {
                 continue;
             }
