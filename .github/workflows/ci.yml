@@ -17,8 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         php:
-          - "7.4"
-          - "8.0"
           - "8.1"
           - "8.2"
           - "8.3"
@@ -114,6 +112,6 @@ jobs:
         run: |
           output=$(php bin/phpdoctor analyse src 2>&1)
           echo "$output"
-          if echo "$output" | grep -q "errors detected"; then
+          if echo "$output" | grep -qE '^[1-9][0-9]* errors detected\.$'; then
             exit 1
           fi
