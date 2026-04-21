@@ -283,7 +283,9 @@ final class CheckClasses
             // reset
             $typeFound = false;
 
-            $propertyPhpDocRaw = $class->properties[$propertyName]->phpDocRaw ?? null;
+            $propertyPhpDocRaw = isset($class->properties[$propertyName])
+                ? $class->properties[$propertyName]->phpDocRaw
+                : null;
 
             if (
                 (
