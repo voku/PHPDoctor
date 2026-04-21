@@ -1,6 +1,16 @@
 # Changelog
 
-### 0.6.5 (2022-10.31)
+### 0.6.6 (2026-04-21)
+
+- add support for different php file extensions
+- add PHP 8 `#[Override]` misuse detection
+- add comprehensive PHP 8 feature coverage tests
+- update dependency `voku/simple-php-code-parser` to `~0.20.0` and `~0.21.0`
+- fix parser update regressions and phpstan typing
+- add GitHub Actions CI workflow and improve CI checks
+- fix phpunit vulnerability: pin to `^9.6.33` and move phpstan to `require-dev`
+
+### 0.6.5 (2022-10-31)
 
 - fix for PHP8 -> "mixed" as native type always wins
 
