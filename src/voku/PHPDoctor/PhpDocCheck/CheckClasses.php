@@ -215,6 +215,8 @@ final class CheckClasses
     }
 
     /**
+     * @param string[] $access
+     *
      * @return array<string, array{
      *     fullDescription: string,
      *     line: null|int,
@@ -274,6 +276,7 @@ final class CheckClasses
 
     /**
      * @param array<string, \voku\SimplePhpParser\Model\PHPMethod> $methods
+     * @param string[]                                             $access
      *
      * @return array<string, array{
      *     fullDescription: string,
@@ -596,6 +599,11 @@ final class CheckClasses
         return false;
     }
 
+    /**
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
     private static function checkDeprecatedAttributeOnClassLikeElement(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         array $error
@@ -613,6 +621,11 @@ final class CheckClasses
         return $error;
     }
 
+    /**
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
     private static function checkDeprecatedAttributeOnMethod(
         \voku\SimplePhpParser\Model\PHPMethod $method,
         string $methodDisplayName,

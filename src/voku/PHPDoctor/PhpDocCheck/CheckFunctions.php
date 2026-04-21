@@ -94,6 +94,11 @@ final class CheckFunctions
         return $error;
     }
 
+    /**
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
     private static function checkDeprecatedAttributeOnFunction(
         \voku\SimplePhpParser\Model\PHPFunction $function,
         array $error

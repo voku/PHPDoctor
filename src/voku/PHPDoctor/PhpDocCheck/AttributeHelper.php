@@ -10,7 +10,7 @@ namespace voku\PHPDoctor\PhpDocCheck;
 final class AttributeHelper
 {
     /**
-     * @param array<int, object> $attributes
+     * @param \voku\SimplePhpParser\Model\PHPAttribute[] $attributes
      */
     public static function hasAttributeNamed(array $attributes, string $attributeName): bool
     {
