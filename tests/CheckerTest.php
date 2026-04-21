@@ -977,7 +977,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         interface SimpleInterface {
             /**
              * @param string $foo
-             * @return int[]
+             * @return int[]  ← phpdoc-only return type; interface is now checked, so this must be present
              */
             public function lall($foo)
         }
