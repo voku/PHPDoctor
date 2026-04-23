@@ -1078,6 +1078,32 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     }
 
     /**
+     * Class constants and properties with a #[\Deprecated] attribute but
+     * without a @deprecated phpdoc tag should be reported as errors.
+     * Elements that already carry @deprecated in their phpdoc must not
+     * produce any error.
+     *
+     * Note: this check relies on reflection and therefore requires the
+     * owning class to be loaded in the current process.  The test uses a
+     * real file (Dummy13.php) so the autoloader can load the class.
+     */
+    public function testDeprecatedAttributeOnConstantsAndProperties(): void
+    {
+        $phpCodeErrors = PhpCodeChecker::checkPhpFiles(__DIR__ . '/Dummy13.php');
+        $phpCodeErrors = self::removeLocalPathForTheTest($phpCodeErrors);
+
+        static::assertSame(
+            [
+                'PHPDoctor/tests/Dummy13.php' => [
+                    0 => '[22]: missing @deprecated tag in phpdoc from voku\tests\Dummy13::MISSING_DOC_CONST',
+                    1 => '[34]: missing @deprecated tag in phpdoc from voku\tests\Dummy13->$missingDocProp',
+                ],
+            ],
+            $phpCodeErrors
+        );
+    }
+
+    /**
      * @param array $result
      *
      * @return array

@@ -33,6 +33,11 @@ final class CheckClasses
                 $error
             );
 
+            $error = self::checkConstantsDeprecatedAttribute(
+                $class,
+                $error
+            );
+
             $error = self::checkProperties(
                 $class,
                 $access,
@@ -59,6 +64,11 @@ final class CheckClasses
                 $error
             );
 
+            $error = self::checkConstantsDeprecatedAttribute(
+                $interface,
+                $error
+            );
+
             $error = self::checkMethods(
                 $interface,
                 $phpInfo,
@@ -73,6 +83,11 @@ final class CheckClasses
 
         foreach ($phpInfo->getEnums() as $enum) {
             $error = self::checkDeprecatedAttributeOnClassLikeElement(
+                $enum,
+                $error
+            );
+
+            $error = self::checkConstantsDeprecatedAttribute(
                 $enum,
                 $error
             );
@@ -645,6 +660,136 @@ final class CheckClasses
     }
 
     /**
+     * Checks all constants of a class-like element for a #[\Deprecated] attribute
+     * without a corresponding @deprecated phpdoc tag.
+     *
+     * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
+    private static function checkConstantsDeprecatedAttribute(
+        \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
+        array $error
+    ): array {
+        foreach ($class->constants as $const) {
+            $error = self::checkDeprecatedAttributeOnConstant(
+                $const,
+                ($class->name ?? '?') . '::' . $const->name,
+                $error
+            );
+        }
+
+        return $error;
+    }
+
+    /**
+     * Checks a single class constant for a #[\Deprecated] attribute without a
+     * corresponding @deprecated phpdoc tag.
+     *
+     * The library's hasDeprecatedTag field is unreliable for class constants
+     * because collectTags() is called on the Const_ child node rather than the
+     * ClassConst parent node that carries the doc-comment. This method works
+     * around that limitation by using reflection when the owning class is
+     * already loaded in the current process.
+     *
+     * @param \voku\SimplePhpParser\Model\PHPConst $const
+     * @param string $displayName
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
+    private static function checkDeprecatedAttributeOnConstant(
+        \voku\SimplePhpParser\Model\PHPConst $const,
+        string $displayName,
+        array $error
+    ): array {
+        if (!AttributeHelper::hasAttributeNamed($const->attributes, 'Deprecated')) {
+            return $error;
+        }
+
+        if ($const->parentName !== null) {
+            $parentName = $const->parentName;
+
+            if (
+                !class_exists($parentName, false)
+                && !interface_exists($parentName, false)
+                && !trait_exists($parentName, false)
+                && !(\function_exists('enum_exists') && \enum_exists($parentName, false))
+            ) {
+                // The owning type is not loaded – skip to avoid false positives.
+                return $error;
+            }
+
+            try {
+                $reflConst = new \ReflectionClassConstant($parentName, $const->name);
+                $docComment = $reflConst->getDocComment();
+                if ($docComment !== false && \stripos($docComment, '@deprecated') !== false) {
+                    return $error;
+                }
+            } catch (\Throwable $e) {
+                // Reflection failed for an unexpected reason – skip to be safe.
+                return $error;
+            }
+        } elseif ($const->hasDeprecatedTag) {
+            return $error;
+        }
+
+        $error[$const->file ?? ''][] = '[' . ($const->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $displayName;
+
+        return $error;
+    }
+
+    /**
+     * Checks a single class property for a #[\Deprecated] attribute without a
+     * corresponding @deprecated phpdoc tag.
+     *
+     * PHPProperty does not implement PHPDocElement, so hasDeprecatedTag is not
+     * available. This method falls back to reflection when the owning class is
+     * already loaded in the current process.
+     *
+     * @param \voku\SimplePhpParser\Model\PHPProperty $property
+     * @param string $className
+     * @param string $displayName
+     * @param string[][] $error
+     *
+     * @return string[][]
+     */
+    private static function checkDeprecatedAttributeOnProperty(
+        \voku\SimplePhpParser\Model\PHPProperty $property,
+        string $className,
+        string $displayName,
+        array $error
+    ): array {
+        if (!AttributeHelper::hasAttributeNamed($property->attributes, 'Deprecated')) {
+            return $error;
+        }
+
+        if (
+            !class_exists($className, false)
+            && !trait_exists($className, false)
+        ) {
+            // The owning type is not loaded – skip to avoid false positives.
+            return $error;
+        }
+
+        try {
+            $reflProp = new \ReflectionProperty($className, $property->name);
+            $docComment = $reflProp->getDocComment();
+            if ($docComment !== false && \stripos($docComment, '@deprecated') !== false) {
+                return $error;
+            }
+        } catch (\Throwable $e) {
+            // Reflection failed for an unexpected reason – skip to be safe.
+            return $error;
+        }
+
+        $error[$property->file ?? ''][] = '[' . ($property->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $displayName;
+
+        return $error;
+    }
+
+    /**
      * @param array                                    $methodInfo
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class
@@ -775,9 +920,18 @@ final class CheckClasses
             // reset
             $typeFound = false;
 
-            $propertyPhpDocRaw = isset($class->properties[$propertyName])
-                ? $class->properties[$propertyName]->phpDocRaw
-                : null;
+            $property = $class->properties[$propertyName] ?? null;
+
+            if ($property !== null) {
+                $error = self::checkDeprecatedAttributeOnProperty(
+                    $property,
+                    $class->name ?? '?',
+                    ($class->name ?? '?') . '->$' . $propertyName,
+                    $error
+                );
+            }
+
+            $propertyPhpDocRaw = $property !== null ? $property->phpDocRaw : null;
 
             if (
                 (
