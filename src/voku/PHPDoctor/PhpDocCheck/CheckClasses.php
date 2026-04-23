@@ -693,6 +693,8 @@ final class CheckClasses
      * around that limitation by using reflection when the owning class is
      * already loaded in the current process.
      *
+     * @param \voku\SimplePhpParser\Model\PHPConst $const
+     * @param string $displayName
      * @param string[][] $error
      *
      * @return string[][]
@@ -713,6 +715,7 @@ final class CheckClasses
                 !class_exists($parentName, false)
                 && !interface_exists($parentName, false)
                 && !trait_exists($parentName, false)
+                && !(\function_exists('enum_exists') && \enum_exists($parentName, false))
             ) {
                 // The owning type is not loaded – skip to avoid false positives.
                 return $error;
@@ -745,6 +748,9 @@ final class CheckClasses
      * available. This method falls back to reflection when the owning class is
      * already loaded in the current process.
      *
+     * @param \voku\SimplePhpParser\Model\PHPProperty $property
+     * @param string $className
+     * @param string $displayName
      * @param string[][] $error
      *
      * @return string[][]
