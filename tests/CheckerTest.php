@@ -1183,6 +1183,19 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             static::assertSame(0, $exitCode);
             static::assertFileExists($baselineFile);
 
+            $baseline = \json_decode((string) \file_get_contents($baselineFile), true);
+
+            static::assertIsArray($baseline);
+            static::assertSame(1, $baseline['schema_version'] ?? null);
+            static::assertSame('phpdoctor', $baseline['tool'] ?? null);
+            static::assertSame('type_and_phpdoc_quality', $baseline['scope'] ?? null);
+            static::assertArrayNotHasKey('summary', $baseline);
+            static::assertArrayNotHasKey('new_findings', $baseline);
+            static::assertArrayNotHasKey('new_summary', $baseline);
+            static::assertArrayNotHasKey('total_error_count', $baseline);
+            static::assertIsArray($baseline['findings'] ?? null);
+            static::assertArrayNotHasKey('message', $baseline['findings'][0] ?? []);
+
             $tester = $this->buildCommandTester();
             $exitCode = $tester->execute([
                 'path' => [__DIR__ . '/Dummy8.php'],
@@ -1191,6 +1204,38 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             ]);
 
             static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 new errors detected', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testCommandLegacyProfileBaselineAllowsExistingFindings(): void
+    {
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-legacy-baseline-');
+        static::assertIsString($baselineFile);
+
+        try {
+            $tester = $this->buildCommandTester();
+            $profileExitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy8.php'],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--output-format' => 'json',
+            ]);
+
+            static::assertSame(1, $profileExitCode);
+            \file_put_contents($baselineFile, $tester->getDisplay());
+
+            $tester = $this->buildCommandTester();
+            $baselineExitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy8.php'],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(0, $baselineExitCode);
             static::assertStringContainsString('0 new errors detected', $tester->getDisplay());
         } finally {
             if (\is_file($baselineFile)) {
@@ -1229,6 +1274,80 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
             static::assertSame(2, $exitCode);
             static::assertStringContainsString('does not contain valid JSON', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testCommandRejectsInvalidBaselineSchema(): void
+    {
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-invalid-baseline-schema-');
+        static::assertIsString($baselineFile);
+        \file_put_contents(
+            $baselineFile,
+            (string) \json_encode(
+                [
+                    'schema_version' => 2,
+                    'tool' => 'phpdoctor',
+                    'scope' => 'type_and_phpdoc_quality',
+                    'generated_at' => '2026-04-24T00:00:00+00:00',
+                    'findings' => [],
+                ],
+                \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES
+            )
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(2, $exitCode);
+            static::assertStringContainsString('supported baseline schema', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testCommandRejectsSchemaVersionOneBaselineFindingWithoutRequiredFields(): void
+    {
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-invalid-baseline-finding-schema-');
+        static::assertIsString($baselineFile);
+        \file_put_contents(
+            $baselineFile,
+            (string) \json_encode(
+                [
+                    'schema_version' => 1,
+                    'tool' => 'phpdoctor',
+                    'scope' => 'type_and_phpdoc_quality',
+                    'generated_at' => '2026-04-24T00:00:00+00:00',
+                    'findings' => [
+                        [
+                            'fingerprint' => 'only-fingerprint',
+                        ],
+                    ],
+                ],
+                \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES
+            )
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(2, $exitCode);
+            static::assertStringContainsString('supported baseline schema', $tester->getDisplay());
         } finally {
             if (\is_file($baselineFile)) {
                 \unlink($baselineFile);
