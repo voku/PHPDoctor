@@ -7,18 +7,19 @@ namespace voku\PHPDoctor\Baseline;
 final class BaselineReader
 {
     /**
+     * @throws \RuntimeException
      * @throws \JsonException
      * @throws \UnexpectedValueException
      */
     public static function read(string $file): Baseline
     {
         if (!\is_readable($file)) {
-            throw new \JsonException('The baseline file is not readable.');
+            throw new \RuntimeException('The baseline file does not exist or is not readable.');
         }
 
         $contents = \file_get_contents($file);
         if (!\is_string($contents)) {
-            throw new \JsonException('The baseline file could not be read.');
+            throw new \RuntimeException('The baseline file could not be read.');
         }
 
         $decoded = \json_decode($contents, true, 512, \JSON_THROW_ON_ERROR);

@@ -227,6 +227,12 @@ final class PhpDoctorCommand extends Command
                 $output->writeln('-------------------------------');
 
                 return 2;
+            } catch (\RuntimeException) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The baseline-file "' . $baselineFile . '" could not be read.');
+                $output->writeln('-------------------------------');
+
+                return 2;
             }
         }
 
