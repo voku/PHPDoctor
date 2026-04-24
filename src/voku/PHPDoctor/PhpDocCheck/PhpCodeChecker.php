@@ -177,6 +177,8 @@ final class PhpCodeChecker
             );
         }
 
+        // Keep the legacy string errors for unchanged text output and external callers
+        // while typed diagnostics feed profile and baseline generation.
         foreach ($diagnostics->all() as $diagnostic) {
             $errors[$diagnostic->file()][] = DiagnosticToLegacyMessageMapper::map($diagnostic);
         }

@@ -15,6 +15,14 @@ final class DiagnosticToFindingMapper
         $category = self::category($diagnostic);
         $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
 
+        return self::mapWithMessage($diagnostic, $category, $message);
+    }
+
+    private static function mapWithMessage(
+        Diagnostic $diagnostic,
+        FindingCategory $category,
+        string $message
+    ): Finding {
         return new Finding(
             $diagnostic->file(),
             $diagnostic->line(),
@@ -38,7 +46,13 @@ final class DiagnosticToFindingMapper
     {
         $diagnosticFindings = [];
         foreach ($diagnostics->all() as $diagnostic) {
-            $diagnosticFindings[$diagnostic->file()][DiagnosticToLegacyMessageMapper::map($diagnostic)][] = self::map($diagnostic);
+            $category = self::category($diagnostic);
+            $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
+            $diagnosticFindings[$diagnostic->file()][$message][] = self::mapWithMessage(
+                $diagnostic,
+                $category,
+                $message
+            );
         }
 
         $findings = [];
