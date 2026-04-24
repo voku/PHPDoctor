@@ -237,6 +237,14 @@ final class PhpDoctorCommand extends Command
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
 
         if ($generateBaseline) {
+            if ($baselineFile === '') {
+                $output->writeln('-------------------------------');
+                $output->writeln('The --generate-baseline option requires --baseline-file.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+
             try {
                 BaselineFlow::generate($baselineFile, $errors);
             } catch (BaselineFlowException $exception) {

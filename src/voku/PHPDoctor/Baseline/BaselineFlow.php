@@ -35,10 +35,6 @@ final class BaselineFlow
      */
     public static function generate(string $baselineFile, array $errors): void
     {
-        if ($baselineFile === '') {
-            throw new BaselineFlowException('The --generate-baseline option requires --baseline-file.');
-        }
-
         $validationError = self::validateWriteTarget($baselineFile);
         if ($validationError !== null) {
             throw new BaselineFlowException($validationError);
