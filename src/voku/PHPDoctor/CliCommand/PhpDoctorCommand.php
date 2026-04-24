@@ -254,7 +254,7 @@ final class PhpDoctorCommand extends Command
                 static function (int $severity, string $message) use (&$writeError): bool {
                     $writeError = '[' . self::errorSeverityToString($severity) . '] ' . $message;
 
-                    return true;
+                    return \in_array($severity, [\E_WARNING, \E_NOTICE, \E_USER_WARNING, \E_USER_NOTICE], true);
                 }
             );
             $writeResult = \file_put_contents($baselineFile, $baselineJson . "\n");
@@ -370,7 +370,7 @@ final class PhpDoctorCommand extends Command
             \E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
             \E_DEPRECATED => 'E_DEPRECATED',
             \E_USER_DEPRECATED => 'E_USER_DEPRECATED',
-            default => 'E_' . $severity,
+            default => 'E_UNKNOWN_' . $severity,
         };
     }
 }

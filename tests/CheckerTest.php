@@ -1298,6 +1298,8 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
         static::assertSame(2, $profile['summary']['parse_error']);
         static::assertSame(0, $profile['summary']['other']);
+        static::assertSame('parse_error', $profile['findings'][0]['category']);
+        static::assertSame('parse_error', $profile['findings'][1]['category']);
     }
 
     public function testCommandExecuteWithInvalidPath(): void
