@@ -1323,6 +1323,43 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(0, $exitCode);
     }
 
+    public function testCommandExecuteRespectsCustomFileExtensions(): void
+    {
+        $directory = \sys_get_temp_dir() . '/phpdoctor-ext-' . \bin2hex(\random_bytes(8));
+        \mkdir($directory);
+        $file = $directory . '/Broken.inc';
+        \file_put_contents(
+            $file,
+            <<<'PHP'
+<?php
+
+function broken_extension_file($value) {
+    return $value;
+}
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [$directory],
+                '--file-extensions' => '.inc',
+                '--path-exclude-regex' => '#/vendor/#i',
+            ]);
+
+            static::assertSame(1, $exitCode);
+            static::assertStringContainsString('missing parameter type for broken_extension_file()', $tester->getDisplay());
+        } finally {
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
     // =========================================================================
     // CheckFunctions uncovered branches
     // =========================================================================

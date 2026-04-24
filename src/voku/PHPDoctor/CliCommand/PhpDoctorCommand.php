@@ -233,7 +233,8 @@ final class PhpDoctorCommand extends Command
             skipFunctionsWithLeadingUnderscore: $skipFunctionsWithLeadingUnderscore,
             skipParseErrorsAsError: $skipParseErrorsAsError,
             autoloaderProjectPaths: $this->autoloaderProjectPaths,
-            pathExcludeRegex: [$pathExcludeRegex]
+            pathExcludeRegex: [$pathExcludeRegex],
+            fileExtensions: \explode('|', $fileExtensions)
         );
 
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
