@@ -58,9 +58,9 @@ final class ReporterTest extends \PHPUnit\Framework\TestCase
         static::assertSame(1, $errorCount);
         static::assertSame(
             <<<'TEXT'
-==============================
+===============================
 List of errors in : src/Foo.php
-==============================
+===============================
 
 src/Foo.php (1 errors)
 [3]: missing property type for Example::$foo
