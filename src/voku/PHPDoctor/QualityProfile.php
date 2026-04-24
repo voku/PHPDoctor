@@ -116,7 +116,11 @@ final class QualityProfile
             return self::CATEGORY_OVERRIDE_CONTRACT;
         }
 
-        if (\stripos($message, 'parse') !== false || \stripos($message, 'syntax error') !== false) {
+        if (
+            \stripos($message, 'parse') !== false
+            || \stripos($message, 'syntax error') !== false
+            || \preg_match('/Unexpected token .* expected .+ on line \d+/i', $message) === 1
+        ) {
             return self::CATEGORY_PARSE_ERROR;
         }
 

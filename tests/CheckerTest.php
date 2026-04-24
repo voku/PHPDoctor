@@ -1199,6 +1199,72 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         }
     }
 
+    public function testCommandGenerateBaselineRequiresBaselineFile(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--generate-baseline' => 'true',
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('requires --baseline-file', $tester->getDisplay());
+    }
+
+    public function testCommandRejectsInvalidBaselineJson(): void
+    {
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-invalid-baseline-');
+        static::assertIsString($baselineFile);
+        \file_put_contents($baselineFile, '{"findings":');
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(2, $exitCode);
+            static::assertStringContainsString('does not contain valid JSON', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testCommandRejectsUnsupportedOutputFormat(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--output-format' => 'xml',
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('is not supported', $tester->getDisplay());
+    }
+
+    public function testCommandProfileSummaryIncludesParseErrorsWhenEnabled(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+            '--profile' => 'true',
+            '--skip-parse-errors' => 'false',
+        ]);
+
+        static::assertSame(1, $exitCode);
+        static::assertStringContainsString('PHPDoctor type and PHPDoc quality profile', $tester->getDisplay());
+        static::assertStringContainsString('- parse_error: 2', $tester->getDisplay());
+        static::assertStringContainsString('- missing_native_type: 2', $tester->getDisplay());
+    }
+
     public function testQualityProfileCategorizesExistingFindings(): void
     {
         $profile = QualityProfile::fromErrors(
@@ -1215,6 +1281,21 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(1, $profile['summary']['missing_native_type']);
         static::assertSame(1, $profile['summary']['wrong_phpdoc_type']);
         static::assertSame(1, $profile['summary']['deprecated_documentation']);
+    }
+
+    public function testQualityProfileCategorizesActualParserFailuresAsParseErrors(): void
+    {
+        $profile = QualityProfile::fromErrors(
+            [
+                'test_file.php' => [
+                    '[39]: foo_broken:39 | Unexpected token "", expected \'}\' at offset 45 on line 1',
+                    '[48]: foo_ignore:48 | Unexpected token "/>", expected \'>\' at offset 33 on line 1 ',
+                ],
+            ]
+        );
+
+        static::assertSame(2, $profile['summary']['parse_error']);
+        static::assertSame(0, $profile['summary']['other']);
     }
 
     public function testCommandExecuteWithInvalidPath(): void
