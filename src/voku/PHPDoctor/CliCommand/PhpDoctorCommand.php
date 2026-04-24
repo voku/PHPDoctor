@@ -14,6 +14,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
+use voku\PHPDoctor\QualityProfile;
 
 final class PhpDoctorCommand extends Command
 {
@@ -95,13 +96,37 @@ final class PhpDoctorCommand extends Command
                 InputOption::VALUE_OPTIONAL,
                 'Skip some paths via regex e.g. "#/vendor/|/other/.*/path/#i"',
                 '#/vendor/|/tests/#i'
-            )->addOption(
-                'file-extensions',
-                null,
-                InputOption::VALUE_OPTIONAL,
-                'Check different file extensions e.g. ".php|.php4|.php5|.inc"',
-                '.php'
-            );
+             )->addOption(
+                 'file-extensions',
+                 null,
+                 InputOption::VALUE_OPTIONAL,
+                 'Check different file extensions e.g. ".php|.php4|.php5|.inc"',
+                 '.php'
+             )->addOption(
+                 'profile',
+                 null,
+                 InputOption::VALUE_OPTIONAL,
+                 'Show a type and PHPDoc quality profile summary. (false or true)',
+                 'false'
+             )->addOption(
+                 'output-format',
+                 null,
+                 InputOption::VALUE_OPTIONAL,
+                 'Output format for the analysis result. (text or json)',
+                 'text'
+             )->addOption(
+                 'baseline-file',
+                 null,
+                 InputOption::VALUE_OPTIONAL,
+                 'Compare against a PHPDoctor JSON baseline file so only new findings fail.',
+                 ''
+             )->addOption(
+                 'generate-baseline',
+                 null,
+                 InputOption::VALUE_OPTIONAL,
+                 'Write the current type and PHPDoc profile to --baseline-file. (false or true)',
+                 'false'
+             );
     }
 
     public function execute(InputInterface $input, OutputInterface $output): int
@@ -156,16 +181,51 @@ final class PhpDoctorCommand extends Command
 
         $fileExtensions = $input->getOption('file-extensions');
         \assert(\is_string($fileExtensions));
+        $fileExtensionsArray = (array) \explode('|', $fileExtensions);
+
+        $profileSummaryEnabled = $input->getOption('profile') !== 'false';
+
+        $outputFormat = $input->getOption('output-format');
+        \assert(\is_string($outputFormat));
+        if (!\in_array($outputFormat, ['text', 'json'], true)) {
+            $output->writeln('-------------------------------');
+            $output->writeln('The output-format "' . $outputFormat . '" is not supported. Use "text" or "json".');
+            $output->writeln('-------------------------------');
+
+            return 2;
+        }
+
+        $baselineFile = $input->getOption('baseline-file');
+        \assert(\is_string($baselineFile) || $baselineFile === null);
+        $baselineFile = $baselineFile ?? '';
+
+        $generateBaseline = $input->getOption('generate-baseline') !== 'false';
+
+        $baselineFingerprints = [];
+        if ($baselineFile !== '' && \is_file($baselineFile)) {
+            $baselineProfile = self::readJsonFile($baselineFile);
+            if ($baselineProfile === null) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The baseline-file "' . $baselineFile . '" does not contain valid JSON.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+
+            $baselineFingerprints = QualityProfile::fingerprintsFromProfile($baselineProfile);
+        }
 
         $formatter = $output->getFormatter();
         $formatter->setStyle('file', new OutputFormatterStyle('default', null, ['bold']));
         $formatter->setStyle('error', new OutputFormatterStyle('red', null, []));
 
-        $banner = \sprintf('List of errors in : %s', \implode(' | ', $pathArray));
-        $output->writeln(\str_repeat('=', \strlen($banner)));
-        $output->writeln($banner);
-        $output->writeln(\str_repeat('=', \strlen($banner)));
-        $output->writeln('');
+        if ($outputFormat === 'text') {
+            $banner = \sprintf('List of errors in : %s', \implode(' | ', $pathArray));
+            $output->writeln(\str_repeat('=', \strlen($banner)));
+            $output->writeln($banner);
+            $output->writeln(\str_repeat('=', \strlen($banner)));
+            $output->writeln('');
+        }
 
         $errors = PhpCodeChecker::checkPhpFiles(
             $pathArray,
@@ -175,8 +235,40 @@ final class PhpDoctorCommand extends Command
             $skipFunctionsWithLeadingUnderscore,
             $skipParseErrorsAsError,
             $this->autoloaderProjectPaths,
-            [$pathExcludeRegex]
+            [$pathExcludeRegex],
+            $fileExtensionsArray
         );
+
+        $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
+
+        if ($generateBaseline) {
+            if ($baselineFile === '') {
+                $output->writeln('-------------------------------');
+                $output->writeln('The --generate-baseline option requires --baseline-file.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+
+            $baselineJson = self::jsonEncode($qualityProfile);
+            if (@\file_put_contents($baselineFile, $baselineJson . "\n") === false) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+
+            $output->writeln('PHPDoctor baseline written to ' . $baselineFile . '.');
+
+            return 0;
+        }
+
+        if ($outputFormat === 'json') {
+            $output->writeln(self::jsonEncode($qualityProfile));
+
+            return $qualityProfile['new_error_count'] > 0 ? 1 : 0;
+        }
 
         $errorCount = 0;
         foreach ($errors as $file => $errorsInner) {
@@ -195,8 +287,52 @@ final class PhpDoctorCommand extends Command
 
         $output->writeln('-------------------------------');
         $output->writeln($errorCount . ' errors detected.');
+        if ($baselineFile !== '') {
+            $output->writeln($qualityProfile['new_error_count'] . ' new errors detected.');
+        }
         $output->writeln('-------------------------------');
 
-        return $errorCount > 0 ? 1 : 0;
+        if ($profileSummaryEnabled || $baselineFile !== '') {
+            $output->writeln('');
+            $output->writeln('PHPDoctor type and PHPDoc quality profile');
+            foreach ($qualityProfile['summary'] as $category => $count) {
+                if ($count > 0) {
+                    $output->writeln('- ' . $category . ': ' . $count);
+                }
+            }
+        }
+
+        return ($baselineFile !== '' ? $qualityProfile['new_error_count'] : $errorCount) > 0 ? 1 : 0;
+    }
+
+    /**
+     * @return array{findings?: mixed}|null
+     */
+    private static function readJsonFile(string $file): ?array
+    {
+        $contents = @\file_get_contents($file);
+        if (!\is_string($contents)) {
+            return null;
+        }
+
+        $decoded = \json_decode($contents, true);
+        if (!\is_array($decoded)) {
+            return null;
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * @param mixed $data
+     */
+    private static function jsonEncode($data): string
+    {
+        $json = \json_encode($data, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
+        if (!\is_string($json)) {
+            throw new \RuntimeException('Could not encode PHPDoctor profile as JSON.');
+        }
+
+        return $json;
     }
 }

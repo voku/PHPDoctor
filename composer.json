@@ -1,10 +1,13 @@
 {
     "name": "voku/phpdoctor",
-    "description": "Check for missing or wrong phpdoc comments.",
+    "description": "Type and PHPDoc quality profiling for PHP projects.",
     "type": "library",
     "keywords": [
         "php",
-        "phpdoc"
+        "phpdoc",
+        "types",
+        "quality",
+        "baseline"
     ],
     "homepage": "https://github.com/voku/PHPDoctor",
     "license": "Apache-2.0",
