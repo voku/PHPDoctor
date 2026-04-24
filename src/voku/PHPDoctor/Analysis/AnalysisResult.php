@@ -45,9 +45,7 @@ final class AnalysisResult
         }
 
         foreach (\array_keys($errors) as $file) {
-            $errorsInner = $errors[$file];
-            \usort($errorsInner, '\strnatcmp');
-            $errors[$file] = $errorsInner;
+            \usort($errors[$file], '\strnatcmp');
         }
 
         return $errors;

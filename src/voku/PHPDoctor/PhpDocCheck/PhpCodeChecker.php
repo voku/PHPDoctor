@@ -116,7 +116,7 @@ final class PhpCodeChecker
      * @param string[]        $fileExtensions
      */
     public static function analyseFiles(
-        $path,
+        string|array $path,
         array $access = ['public', 'protected', 'private'],
         bool $skipAmbiguousTypesAsError = false,
         bool $skipDeprecatedFunctions = false,
