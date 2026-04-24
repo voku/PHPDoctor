@@ -20,6 +20,7 @@ final class PhpDoctorCommand extends Command
 {
     public const COMMAND_NAME = 'analyse';
     public const ALIASES = ['analyze'];
+    private const SUPPRESSIBLE_WRITE_ERROR_SEVERITIES = [\E_WARNING, \E_NOTICE, \E_USER_WARNING, \E_USER_NOTICE];
 
     /**
      * @var string[]
@@ -254,7 +255,7 @@ final class PhpDoctorCommand extends Command
                 static function (int $severity, string $message) use (&$writeError): bool {
                     $writeError = '[' . self::errorSeverityToString($severity) . '] ' . $message;
 
-                    return \in_array($severity, [\E_WARNING, \E_NOTICE, \E_USER_WARNING, \E_USER_NOTICE], true);
+                    return \in_array($severity, self::SUPPRESSIBLE_WRITE_ERROR_SEVERITIES, true);
                 }
             );
             $writeResult = \file_put_contents($baselineFile, $baselineJson . "\n");

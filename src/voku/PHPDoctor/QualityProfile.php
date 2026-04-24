@@ -102,6 +102,7 @@ final class QualityProfile
             'line'        => $line,
             'category'    => self::categorizeMessage($message),
             'message'     => $message,
+            // Prefix lengths so different file/message pairs cannot collide through separator reuse.
             'fingerprint' => \hash('sha256', \strlen($file) . ':' . $file . '|' . \strlen($message) . ':' . $message),
         ];
     }
