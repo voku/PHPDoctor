@@ -1,5 +1,9 @@
 # Changelog
 
+### 0.6.7 (2026-04-24)
+
+- increase code coverage by ~19.5% (from 76% to 95%): add CLI command tests, function type-check branch tests, and phpdoc-type-check branch tests
+
 ### 0.6.6 (2026-04-21)
 
 - add support for different php file extensions
