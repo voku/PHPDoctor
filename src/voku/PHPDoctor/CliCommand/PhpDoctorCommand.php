@@ -13,11 +13,12 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use voku\PHPDoctor\Baseline\BaselineBuilder;
-use voku\PHPDoctor\Baseline\BaselineReader;
-use voku\PHPDoctor\Baseline\BaselineWriter;
+use voku\PHPDoctor\Baseline\BaselineFlow;
+use voku\PHPDoctor\Baseline\BaselineFlowException;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 use voku\PHPDoctor\QualityProfile;
+use voku\PHPDoctor\Report\JsonProfileReporter;
+use voku\PHPDoctor\Report\TextProfileReporter;
 
 final class PhpDoctorCommand extends Command
 {
@@ -205,47 +206,20 @@ final class PhpDoctorCommand extends Command
 
         $baselineFingerprints = [];
         if (!$generateBaseline && $baselineFile !== '') {
-            if (!\is_file($baselineFile)) {
-                $output->writeln('-------------------------------');
-                $output->writeln('The baseline-file "' . $baselineFile . '" does not exist.');
-                $output->writeln('-------------------------------');
-
-                return 2;
-            }
-
             try {
-                $baselineFingerprints = BaselineReader::read($baselineFile)->fingerprints();
-            } catch (\JsonException) {
+                $baselineFingerprints = BaselineFlow::loadFingerprints($baselineFile);
+            } catch (BaselineFlowException $exception) {
                 $output->writeln('-------------------------------');
-                $output->writeln('The baseline-file "' . $baselineFile . '" does not contain valid JSON.');
-                $output->writeln('-------------------------------');
-
-                return 2;
-            } catch (\UnexpectedValueException) {
-                $output->writeln('-------------------------------');
-                $output->writeln('The baseline-file "' . $baselineFile . '" does not contain a supported baseline schema.');
-                $output->writeln('-------------------------------');
-
-                return 2;
-            } catch (\RuntimeException) {
-                $output->writeln('-------------------------------');
-                $output->writeln('The baseline-file "' . $baselineFile . '" could not be read.');
+                $output->writeln($exception->getMessage());
                 $output->writeln('-------------------------------');
 
                 return 2;
             }
         }
 
-        $formatter = $output->getFormatter();
-        $formatter->setStyle('file', new OutputFormatterStyle('default', null, ['bold']));
-        $formatter->setStyle('error', new OutputFormatterStyle('red', null, []));
-
         if ($outputFormat === 'text') {
-            $banner = \sprintf('List of errors in : %s', \implode(' | ', $pathArray));
-            $output->writeln(\str_repeat('=', \strlen($banner)));
-            $output->writeln($banner);
-            $output->writeln(\str_repeat('=', \strlen($banner)));
-            $output->writeln('');
+            TextProfileReporter::configureStyles($output);
+            TextProfileReporter::writeBanner($output, $pathArray);
         }
 
         $errors = PhpCodeChecker::checkPhpFiles(
@@ -271,20 +245,11 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            $baselineWriteValidationError = self::validateBaselineWriteTarget($baselineFile);
-            if ($baselineWriteValidationError !== null) {
+            try {
+                BaselineFlow::generate($baselineFile, $errors);
+            } catch (BaselineFlowException $exception) {
                 $output->writeln('-------------------------------');
-                $output->writeln($baselineWriteValidationError);
-                $output->writeln('-------------------------------');
-
-                return 2;
-            }
-
-            $writeResult = BaselineWriter::write($baselineFile, BaselineBuilder::fromErrors($errors));
-
-            if ($writeResult === false) {
-                $output->writeln('-------------------------------');
-                $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
+                $output->writeln($exception->getMessage());
                 $output->writeln('-------------------------------');
 
                 return 2;
@@ -296,67 +261,20 @@ final class PhpDoctorCommand extends Command
         }
 
         if ($outputFormat === 'json') {
-            $output->writeln(self::jsonEncode($qualityProfile));
+            JsonProfileReporter::write($output, $qualityProfile);
 
             return $qualityProfile['new_error_count'] > 0 ? 1 : 0;
         }
 
-        $errorCount = 0;
-        foreach ($errors as $file => $errorsInner) {
-            $errorCountFile = \count($errorsInner);
-            $errorCount += $errorCountFile;
-
-            $output->writeln('<file>' . $file . '</file>' . ' (' . $errorCountFile . ' errors)');
-
-            foreach ($errorsInner as $errorInner) {
-                $output->writeln('<error>' . $errorInner . '</error>');
-            }
-
-            /** @noinspection DisconnectedForeachInstructionInspection */
-            $output->writeln('');
-        }
-
-        $output->writeln('-------------------------------');
-        $output->writeln($errorCount . ' errors detected.');
-        if ($baselineFile !== '') {
-            $output->writeln($qualityProfile['new_error_count'] . ' new errors detected.');
-        }
-        $output->writeln('-------------------------------');
-
-        if ($profileSummaryEnabled || $baselineFile !== '') {
-            $output->writeln('');
-            $output->writeln('PHPDoctor type and PHPDoc quality profile');
-            foreach ($qualityProfile['summary'] as $category => $count) {
-                if ($count > 0) {
-                    $output->writeln('- ' . $category . ': ' . $count);
-                }
-            }
-        }
+        $errorCount = TextProfileReporter::writeAnalysis(
+            $output,
+            $errors,
+            $qualityProfile,
+            $profileSummaryEnabled,
+            $baselineFile !== ''
+        );
 
         return ($baselineFile !== '' ? $qualityProfile['new_error_count'] : $errorCount) > 0 ? 1 : 0;
-    }
-
-    private static function jsonEncode(mixed $data): string
-    {
-        return \json_encode($data, \JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
-    }
-
-    private static function validateBaselineWriteTarget(string $baselineFile): ?string
-    {
-        $directory = \dirname($baselineFile);
-        if (!\is_dir($directory)) {
-            return 'The baseline-file directory "' . $directory . '" does not exist.';
-        }
-
-        if (!\is_writable($directory)) {
-            return 'The baseline-file directory "' . $directory . '" is not writable.';
-        }
-
-        if (\file_exists($baselineFile) && !\is_writable($baselineFile)) {
-            return 'The baseline-file "' . $baselineFile . '" is not writable.';
-        }
-
-        return null;
     }
 
     /**
