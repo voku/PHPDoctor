@@ -2,6 +2,8 @@
 
 ### [Unreleased]
 
+### 0.7.0 (2026-04-24)
+
 - feat: detect `#[\Deprecated]` attribute on class constants and properties
 - fix: add `enum_exists` check and missing `@param` tags in docblocks
 - feat: add PHAR release workflow; update `box.json.dist` and README
