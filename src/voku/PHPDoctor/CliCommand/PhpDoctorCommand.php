@@ -181,7 +181,6 @@ final class PhpDoctorCommand extends Command
 
         $fileExtensions = $input->getOption('file-extensions');
         \assert(\is_string($fileExtensions));
-        $fileExtensionsArray = \explode('|', $fileExtensions);
 
         $profileSummaryEnabled = $input->getOption('profile') !== 'false';
 
@@ -235,7 +234,7 @@ final class PhpDoctorCommand extends Command
             $skipParseErrorsAsError,
             $this->autoloaderProjectPaths,
             [$pathExcludeRegex],
-            $fileExtensionsArray
+            \explode('|', $fileExtensions)
         );
 
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);

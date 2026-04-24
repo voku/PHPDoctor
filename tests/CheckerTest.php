@@ -1168,7 +1168,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
     public function testCommandBaselineAllowsExistingFindings(): void
     {
-        $baselineFile = \sys_get_temp_dir() . '/phpdoctor-baseline-' . \uniqid('', true) . '.json';
+        $baselineFile = \sys_get_temp_dir() . '/phpdoctor-baseline-' . \uniqid() . '.json';
 
         try {
             $tester = $this->buildCommandTester();
