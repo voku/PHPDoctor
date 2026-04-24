@@ -108,11 +108,11 @@ final class QualityProfile
 
     private static function categorizeMessage(string $message): string
     {
-        if (\strpos($message, 'missing @deprecated tag') !== false) {
+        if (\str_contains($message, 'missing @deprecated tag')) {
             return self::CATEGORY_DEPRECATED_DOCUMENTATION;
         }
 
-        if (\strpos($message, 'invalid #[\Override] usage') !== false) {
+        if (\str_contains($message, 'invalid #[\Override] usage')) {
             return self::CATEGORY_OVERRIDE_CONTRACT;
         }
 

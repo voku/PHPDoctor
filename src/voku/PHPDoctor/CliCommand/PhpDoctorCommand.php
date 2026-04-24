@@ -200,7 +200,7 @@ final class PhpDoctorCommand extends Command
         $generateBaseline = $input->getOption('generate-baseline') !== 'false';
 
         $baselineFingerprints = [];
-        if ($baselineFile !== '' && \is_file($baselineFile)) {
+        if (!$generateBaseline && $baselineFile !== '' && \is_file($baselineFile)) {
             $baselineProfile = self::readJsonFile($baselineFile);
             if ($baselineProfile === null) {
                 $output->writeln('-------------------------------');
@@ -226,15 +226,15 @@ final class PhpDoctorCommand extends Command
         }
 
         $errors = PhpCodeChecker::checkPhpFiles(
-            $pathArray,
-            $access,
-            $skipAmbiguousTypesAsError,
-            $skipDeprecatedFunctions,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipParseErrorsAsError,
-            $this->autoloaderProjectPaths,
-            [$pathExcludeRegex],
-            \explode('|', $fileExtensions)
+            path: $pathArray,
+            access: $access,
+            skipAmbiguousTypesAsError: $skipAmbiguousTypesAsError,
+            skipDeprecatedFunctions: $skipDeprecatedFunctions,
+            skipFunctionsWithLeadingUnderscore: $skipFunctionsWithLeadingUnderscore,
+            skipParseErrorsAsError: $skipParseErrorsAsError,
+            autoloaderProjectPaths: $this->autoloaderProjectPaths,
+            pathExcludeRegex: [$pathExcludeRegex],
+            fileExtensions: \explode('|', $fileExtensions)
         );
 
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
@@ -252,7 +252,9 @@ final class PhpDoctorCommand extends Command
             $writeError = null;
             \set_error_handler(
                 static function (int $severity, string $message) use (&$writeError): bool {
-                    $writeError = $message;
+                    if ($severity !== 0) {
+                        $writeError = $message;
+                    }
 
                     return true;
                 }
