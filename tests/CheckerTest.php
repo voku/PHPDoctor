@@ -425,7 +425,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         $diagnostics = $analysisResult['diagnostics']->all();
 
         static::assertSame(
-            ['[7]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()'],
+            ['[6]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()'],
             $errors
         );
         static::assertCount(1, $diagnostics);

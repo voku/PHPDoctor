@@ -63,10 +63,11 @@ final class CheckClasses
      * @param bool                                                 $skipAmbiguousTypesAsError
      * @param bool                                                 $skipParseErrorsAsError
      * @param string[][]                                           $error
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection      $diagnostics
      *
      * @return array{
      *     errors: array<string, array<int, string>>,
-     *     diagnostics: DiagnosticCollection
+     *     diagnostics: \voku\PHPDoctor\Diagnostic\DiagnosticCollection
      * }
      */
     public static function checkClassesWithDiagnostics(
@@ -159,6 +160,8 @@ final class CheckClasses
             );
         }
 
+        /** @var array<string, array<int, string>> $error */
+
         return [
             'errors' => $error,
             'diagnostics' => $diagnostics,
@@ -174,7 +177,7 @@ final class CheckClasses
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param bool                                     $skipParseErrorsAsError
      * @param string[][]                               $error
-     * @param DiagnosticCollection                     $diagnostics
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
      * @return string[][]
      */
@@ -675,7 +678,7 @@ final class CheckClasses
     }
 
     /**
-     * @return DiagnosticCollection
+     * @return \voku\PHPDoctor\Diagnostic\DiagnosticCollection
      */
     private static function checkDeprecatedAttributeOnClassLikeElement(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
@@ -700,7 +703,7 @@ final class CheckClasses
     }
 
     /**
-     * @return DiagnosticCollection
+     * @return \voku\PHPDoctor\Diagnostic\DiagnosticCollection
      */
     private static function checkDeprecatedAttributeOnMethod(
         \voku\SimplePhpParser\Model\PHPMethod $method,
