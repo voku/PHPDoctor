@@ -222,7 +222,7 @@ final class PhpDoctorCommand extends Command
             TextProfileReporter::writeBanner($output, $pathArray);
         }
 
-        $analysisResult = PhpCodeChecker::checkPhpFilesWithDiagnostics(
+        $analysisResult = PhpCodeChecker::analyseFiles(
             path: $pathArray,
             access: $access,
             skipAmbiguousTypesAsError: $skipAmbiguousTypesAsError,
@@ -233,10 +233,13 @@ final class PhpDoctorCommand extends Command
             pathExcludeRegex: [$pathExcludeRegex],
             fileExtensions: $fileExtensions
         );
-        $errors = $analysisResult['errors'];
-        $diagnostics = $analysisResult['diagnostics'];
+        $errors = $analysisResult->toLegacyErrors();
 
-        $qualityProfile = QualityProfile::fromErrorsAndDiagnostics($errors, $diagnostics, $baselineFingerprints);
+        $qualityProfile = QualityProfile::fromErrorsAndDiagnostics(
+            $errors,
+            $analysisResult->diagnostics(),
+            $baselineFingerprints
+        );
 
         if ($generateBaseline) {
             if ($baselineFile === '') {
@@ -248,7 +251,11 @@ final class PhpDoctorCommand extends Command
             }
 
             try {
-                BaselineFlow::generateFromErrorsAndDiagnostics($baselineFile, $errors, $diagnostics);
+                BaselineFlow::generateFromErrorsAndDiagnostics(
+                    $baselineFile,
+                    $errors,
+                    $analysisResult->diagnostics()
+                );
             } catch (BaselineFlowException $exception) {
                 $output->writeln('-------------------------------');
                 $output->writeln($exception->getMessage());
