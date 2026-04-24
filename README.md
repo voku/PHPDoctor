@@ -1,5 +1,4 @@
-[![Build Status](https://travis-ci.com/voku/PHPDoctor.svg?branch=master)](https://travis-ci.com/voku/PHPDoctor)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/2feaf2a179a24a5fac99cbf67e72df2f)](https://www.codacy.com/manual/voku/PHPDoctor?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=voku/PHPDoctor&amp;utm_campaign=Badge_Grade)
+[![CI](https://github.com/voku/PHPDoctor/actions/workflows/ci.yml/badge.svg)](https://github.com/voku/PHPDoctor/actions/workflows/ci.yml)
 [![Latest Stable Version](https://poser.pugx.org/voku/PHPDoctor/v/stable)](https://packagist.org/packages/voku/PHPDoctor) 
 [![License](https://poser.pugx.org/voku/PHPDoctor/license)](https://packagist.org/packages/voku/PHPDoctor)
 [![Donate to this project using Paypal](https://img.shields.io/badge/paypal-donate-yellow.svg)](https://www.paypal.me/moelleken)
@@ -14,7 +13,12 @@ in the team still commit non typed code, then PHPDoctor is for you.
 
 ### Install via "phar" (**recommended**)
 
-https://github.com/voku/PHPDoctor/releases
+```bash
+curl -L https://github.com/voku/PHPDoctor/releases/latest/download/phpdoctor.phar -o phpdoctor.phar
+chmod +x phpdoctor.phar
+```
+
+All releases: https://github.com/voku/PHPDoctor/releases
 
 ### Install via "composer require"
 
@@ -81,25 +85,41 @@ function foo_ignore($lall) {
 
 ### Building the PHAR file
 
-Prepare: https://github.com/phar-io/phive
+The PHAR is built automatically via GitHub Actions whenever a new version tag (`*.*.*`) is pushed.
+The resulting `phpdoctor.phar` is attached to the corresponding GitHub Release and can be downloaded directly:
 
 ```bash
-phive install humbug/box
-php tools/box compile --debug
+# download the latest release
+curl -L https://github.com/voku/PHPDoctor/releases/latest/download/phpdoctor.phar -o phpdoctor.phar
+chmod +x phpdoctor.phar
+php phpdoctor.phar analyse --help
+```
+
+To build locally, install [humbug/box](https://github.com/box-project/box) and run:
+
+```bash
+# install production dependencies only
+composer install --no-dev --optimize-autoloader
+
+# download box (or install via phive: phive install humbug/box)
+curl -L https://github.com/box-project/box/releases/latest/download/box.phar -o box.phar
+
+# compile the PHAR
+php box.phar compile --config=box.json.dist
 ```
 
 ### Support
 
-For support and donations please visit [Github](https://github.com/voku/simple_html_dom/) | [Issues](https://github.com/voku/simple_html_dom/issues) | [PayPal](https://paypal.me/moelleken) | [Patreon](https://www.patreon.com/voku).
+For support and donations please visit [Github](https://github.com/voku/PHPDoctor/) | [Issues](https://github.com/voku/PHPDoctor/issues) | [PayPal](https://paypal.me/moelleken) | [Patreon](https://www.patreon.com/voku).
 
-For status updates and release announcements please visit [Releases](https://github.com/voku/simple_html_dom/releases) | [Twitter](https://twitter.com/suckup_de) | [Patreon](https://www.patreon.com/voku/posts).
+For status updates and release announcements please visit [Releases](https://github.com/voku/PHPDoctor/releases) | [Twitter](https://twitter.com/suckup_de) | [Patreon](https://www.patreon.com/voku/posts).
 
 For professional support please contact [me](https://about.me/voku).
 
 ### Thanks
 
-- Thanks to [GitHub](https://github.com) (Microsoft) for hosting the code and a good infrastructure including Issues-Managment, etc.
+- Thanks to [GitHub](https://github.com) (Microsoft) for hosting the code and a good infrastructure including Issues-Management, etc.
 - Thanks to [IntelliJ](https://www.jetbrains.com) as they make the best IDEs for PHP and they gave me an open source license for PhpStorm!
-- Thanks to [Travis CI](https://travis-ci.com/) for being the most awesome, easiest continous integration tool out there!
-- Thanks to [StyleCI](https://styleci.io/) for the simple but powerfull code style check.
+- Thanks to [GitHub Actions](https://github.com/features/actions) for the awesome CI/CD platform!
+- Thanks to [StyleCI](https://styleci.io/) for the simple but powerful code style check.
 - Thanks to [PHPStan](https://github.com/phpstan/phpstan) && [Psalm](https://github.com/vimeo/psalm) for really great Static analysis tools and for discover bugs in the code!
