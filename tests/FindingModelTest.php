@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace voku\tests;
 
+use voku\PHPDoctor\Baseline\BaselineBuilder;
+use voku\PHPDoctor\Baseline\BaselineReader;
 use voku\PHPDoctor\Finding\Finding;
 use voku\PHPDoctor\Finding\FindingCategory;
 use voku\PHPDoctor\Finding\FindingFingerprint;
@@ -78,5 +80,54 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         $legacyProfile = QualityProfile::fromErrors($errors);
 
         static::assertSame($legacyProfile, $typedProfile);
+    }
+
+    public function testBaselineBuilderProducesCompactSchema(): void
+    {
+        $baseline = BaselineBuilder::fromErrors(
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                    '[8]: wrong return type "string" in phpdoc from voku\tests\WrongDoc->foo()',
+                ],
+            ]
+        )->toArray();
+
+        static::assertSame(1, $baseline['schema_version']);
+        static::assertSame('phpdoctor', $baseline['tool']);
+        static::assertSame('type_and_phpdoc_quality', $baseline['scope']);
+        static::assertIsString($baseline['generated_at']);
+        static::assertArrayNotHasKey('summary', $baseline);
+        static::assertArrayNotHasKey('new_findings', $baseline);
+        static::assertArrayNotHasKey('message', $baseline['findings'][0]);
+    }
+
+    public function testBaselineReaderSupportsLegacyAndSchemaVersionOneFormats(): void
+    {
+        $profile = QualityProfile::fromErrors(
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                    '[8]: wrong return type "string" in phpdoc from voku\tests\WrongDoc->foo()',
+                ],
+            ]
+        );
+        $baseline = BaselineBuilder::fromErrors(
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                    '[8]: wrong return type "string" in phpdoc from voku\tests\WrongDoc->foo()',
+                ],
+            ]
+        )->toArray();
+
+        static::assertSame(
+            QualityProfile::fingerprintsFromProfile($profile),
+            BaselineReader::fromArray($profile)->fingerprints()
+        );
+        static::assertSame(
+            QualityProfile::fingerprintsFromProfile($profile),
+            BaselineReader::fromArray($baseline)->fingerprints()
+        );
     }
 }

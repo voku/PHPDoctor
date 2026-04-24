@@ -13,6 +13,9 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use voku\PHPDoctor\Baseline\BaselineBuilder;
+use voku\PHPDoctor\Baseline\BaselineReader;
+use voku\PHPDoctor\Baseline\BaselineWriter;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 use voku\PHPDoctor\QualityProfile;
 
@@ -210,16 +213,21 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            $baselineProfile = self::readJsonFile($baselineFile);
-            if ($baselineProfile === null) {
+            try {
+                $baselineFingerprints = BaselineReader::read($baselineFile)->fingerprints();
+            } catch (\JsonException) {
                 $output->writeln('-------------------------------');
                 $output->writeln('The baseline-file "' . $baselineFile . '" does not contain valid JSON.');
                 $output->writeln('-------------------------------');
 
                 return 2;
-            }
+            } catch (\UnexpectedValueException) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The baseline-file "' . $baselineFile . '" does not contain a supported baseline schema.');
+                $output->writeln('-------------------------------');
 
-            $baselineFingerprints = QualityProfile::fingerprintsFromProfile($baselineProfile);
+                return 2;
+            }
         }
 
         $formatter = $output->getFormatter();
@@ -266,8 +274,7 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            $baselineJson = self::jsonEncode($qualityProfile);
-            $writeResult = \file_put_contents($baselineFile, $baselineJson . "\n");
+            $writeResult = BaselineWriter::write($baselineFile, BaselineBuilder::fromErrors($errors));
 
             if ($writeResult === false) {
                 $output->writeln('-------------------------------');
@@ -321,28 +328,6 @@ final class PhpDoctorCommand extends Command
         }
 
         return ($baselineFile !== '' ? $qualityProfile['new_error_count'] : $errorCount) > 0 ? 1 : 0;
-    }
-
-    /**
-     * @return array{findings?: mixed}|null
-     */
-    private static function readJsonFile(string $file): ?array
-    {
-        if (!\is_readable($file)) {
-            return null;
-        }
-
-        $contents = \file_get_contents($file);
-        if (!\is_string($contents)) {
-            return null;
-        }
-
-        $decoded = \json_decode($contents, true);
-        if (!\is_array($decoded)) {
-            return null;
-        }
-
-        return $decoded;
     }
 
     private static function jsonEncode(mixed $data): string
