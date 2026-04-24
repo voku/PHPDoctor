@@ -89,6 +89,7 @@ final class DiagnosticToFindingMapper
     {
         return match ($diagnostic->id()) {
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => FindingCategory::fromValue(FindingCategory::DEPRECATED_DOCUMENTATION),
+            DiagnosticId::PARSER_SYNTAX_ERROR => FindingCategory::fromValue(FindingCategory::PARSE_ERROR),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
     }

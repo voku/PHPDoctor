@@ -436,6 +436,52 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testParseErrorDiagnosticsPreserveLegacyOutput(): void
+    {
+        $code = "<?php\nfunction broken( {\n";
+        $expectedMessage = \dirname(__DIR__) . '/vendor/nikic/php-parser/lib/PhpParser/ParserAbstract.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
+            . "\n"
+            . \dirname(__DIR__) . '/vendor/nikic/php-parser/lib/PhpParser/ParserAbstract.php on line 2';
+        $analysisResult = PhpCodeChecker::checkFromStringWithDiagnostics(
+            $code,
+            ['public', 'protected', 'private'],
+            false,
+            false,
+            false,
+            false
+        );
+        $errors = $analysisResult['errors'][''] ?? [];
+        $diagnostics = $analysisResult['diagnostics']->all();
+
+        static::assertSame([$expectedMessage], $errors);
+        static::assertCount(1, $diagnostics);
+        static::assertSame('parser_syntax_error', $diagnostics[0]->id());
+        static::assertSame(['legacy_message' => $expectedMessage], $diagnostics[0]->evidence());
+    }
+
+    public function testParseErrorsEnabledBehaviorRemainsUnchanged(): void
+    {
+        $file = \sys_get_temp_dir() . '/phpdoctor-parse-error-' . \bin2hex(\random_bytes(8)) . '.php';
+        \file_put_contents($file, "<?php\nfunction broken( {\n");
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [$file],
+                '--skip-parse-errors' => 'false',
+            ]);
+
+            static::assertSame(1, $exitCode);
+            static::assertStringContainsString('Syntax error, unexpected', $tester->getDisplay());
+            static::assertStringContainsString('T_VARIABLE', $tester->getDisplay());
+        } finally {
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+        }
+    }
+
     public function testPhp8ModernFeatureSupportSmoke(): void
     {
         $code = '<?php

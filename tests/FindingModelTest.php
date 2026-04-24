@@ -112,6 +112,24 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testParseErrorDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $message = '/tmp/parser.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
+            . "\n"
+            . '/tmp/parser.php on line 2';
+        $diagnostic = new Diagnostic(
+            DiagnosticId::PARSER_SYNTAX_ERROR,
+            '',
+            null,
+            ['legacy_message' => $message]
+        );
+
+        static::assertSame(
+            Finding::fromMessage('', $message)->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testDiagnosticToFindingMapAllAvoidsDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
@@ -130,6 +148,30 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertCount(1, $findings);
         static::assertSame(
             Finding::fromMessage('test_file.php', $message)->toArray(),
+            $findings[0]->toArray()
+        );
+    }
+
+    public function testDiagnosticToFindingMapAllAvoidsDuplicateParseErrorFinding(): void
+    {
+        $message = '/tmp/parser.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
+            . "\n"
+            . '/tmp/parser.php on line 2';
+        $diagnostic = new Diagnostic(
+            DiagnosticId::PARSER_SYNTAX_ERROR,
+            '',
+            null,
+            ['legacy_message' => $message]
+        );
+
+        $findings = DiagnosticToFindingMapper::mapAll(
+            ['' => [$message]],
+            new DiagnosticCollection([$diagnostic])
+        );
+
+        static::assertCount(1, $findings);
+        static::assertSame(
+            Finding::fromMessage('', $message)->toArray(),
             $findings[0]->toArray()
         );
     }
@@ -170,6 +212,33 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 'test_file.php',
                 10,
                 ['display_name' => 'voku\tests\OldClass->oldMethod()']
+            ),
+        ]);
+        $baseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+
+        $profile = QualityProfileBuilder::fromErrorsAndDiagnostics(
+            $errors,
+            $diagnostics,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithParseErrorDiagnostics(): void
+    {
+        $message = '/tmp/parser.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
+            . "\n"
+            . '/tmp/parser.php on line 2';
+        $errors = ['' => [$message]];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::PARSER_SYNTAX_ERROR,
+                '',
+                null,
+                ['legacy_message' => $message]
             ),
         ]);
         $baseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
