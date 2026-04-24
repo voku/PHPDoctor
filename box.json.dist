@@ -2,9 +2,13 @@
   "main": "bin/phpdoctor.php",
   "output": "phpdoctor.phar",
   "banner": false,
+  "chmod": "0755",
+  "compression": "GZ",
   "check-requirements": true,
   "directories": [
+    "bin",
     "src"
   ],
-  "force-autodiscovery": true
+  "force-autodiscovery": true,
+  "exclude-dev-files": true
 }
