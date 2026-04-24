@@ -6,6 +6,10 @@ namespace voku\tests;
 
 use voku\PHPDoctor\Baseline\BaselineBuilder;
 use voku\PHPDoctor\Baseline\BaselineReader;
+use voku\PHPDoctor\Diagnostic\Diagnostic;
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticId;
+use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
 use voku\PHPDoctor\Finding\FindingCategory;
 use voku\PHPDoctor\Finding\FindingFingerprint;
@@ -67,6 +71,14 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame($fingerprint->toString(), $finding->fingerprint()->toString());
     }
 
+    public function testFindingCategoryRejectsUnknownValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported finding category "not_a_real_category".');
+
+        FindingCategory::fromValue('not_a_real_category');
+    }
+
     public function testQualityProfileOutputCompatibility(): void
     {
         $errors = [
@@ -80,6 +92,47 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         $legacyProfile = QualityProfile::fromErrors($errors);
 
         static::assertSame($legacyProfile, $typedProfile);
+    }
+
+    public function testDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+            'test_file.php',
+            10,
+            ['display_name' => 'voku\tests\OldClass']
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
+    public function testQualityProfileOutputCompatibilityWithDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+
+        static::assertSame(
+            QualityProfile::fromErrors($errors),
+            QualityProfileBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray()
+        );
     }
 
     public function testBaselineBuilderProducesCompactSchema(): void
@@ -100,6 +153,32 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertArrayNotHasKey('summary', $baseline);
         static::assertArrayNotHasKey('new_findings', $baseline);
         static::assertArrayNotHasKey('message', $baseline['findings'][0]);
+    }
+
+    public function testBaselineBuilderProducesCompactSchemaWithDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+
+        $legacyBaseline = BaselineBuilder::fromErrors($errors)->toArray();
+        $typedBaseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+
+        static::assertSame($legacyBaseline['schema_version'], $typedBaseline['schema_version']);
+        static::assertSame($legacyBaseline['tool'], $typedBaseline['tool']);
+        static::assertSame($legacyBaseline['scope'], $typedBaseline['scope']);
+        static::assertSame($legacyBaseline['findings'], $typedBaseline['findings']);
     }
 
     public function testBaselineReaderSupportsLegacyAndSchemaVersionOneFormats(): void

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\Profile;
 
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
 
 final class QualityProfileBuilder
@@ -14,13 +16,30 @@ final class QualityProfileBuilder
      */
     public static function fromErrors(array $errors, array $baselineFingerprints = []): QualityProfile
     {
-        $findings = [];
-        foreach ($errors as $file => $messages) {
-            foreach ($messages as $message) {
-                $findings[] = Finding::fromMessage((string) $file, $message);
-            }
-        }
+        return self::fromFindings(self::findingsFromErrors($errors), $baselineFingerprints);
+    }
 
+    /**
+     * @param array<string, list<string>> $errors
+     * @param string[]                    $baselineFingerprints
+     */
+    public static function fromErrorsAndDiagnostics(
+        array $errors,
+        DiagnosticCollection $diagnostics,
+        array $baselineFingerprints = []
+    ): QualityProfile {
+        return self::fromFindings(
+            DiagnosticToFindingMapper::mapAll($errors, $diagnostics),
+            $baselineFingerprints
+        );
+    }
+
+    /**
+     * @param list<Finding> $findings
+     * @param string[]      $baselineFingerprints
+     */
+    public static function fromFindings(array $findings, array $baselineFingerprints = []): QualityProfile
+    {
         $baselineMap = \array_flip($baselineFingerprints);
         $newFindings = [];
         foreach ($findings as $finding) {
@@ -30,5 +49,22 @@ final class QualityProfileBuilder
         }
 
         return new QualityProfile($findings, $newFindings);
+    }
+
+    /**
+     * @param array<string, list<string>> $errors
+     *
+     * @return list<Finding>
+     */
+    private static function findingsFromErrors(array $errors): array
+    {
+        $findings = [];
+        foreach ($errors as $file => $messages) {
+            foreach ($messages as $message) {
+                $findings[] = Finding::fromMessage((string) $file, $message);
+            }
+        }
+
+        return $findings;
     }
 }

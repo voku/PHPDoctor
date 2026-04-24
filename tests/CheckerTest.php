@@ -353,6 +353,33 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertContains('[' . '34]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()', $errors);
     }
 
+    public function testDeprecatedFunctionDiagnosticsPreserveLegacyOutput(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        #[\Deprecated]
+        function old_function(string $value): string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::checkFromStringWithDiagnostics($code);
+        $errors = $analysisResult['errors'][''] ?? [];
+        $diagnostics = $analysisResult['diagnostics']->all();
+
+        static::assertSame(
+            ['[4]: missing @deprecated tag in phpdoc from voku\tests\old_function()'],
+            $errors
+        );
+        static::assertCount(1, $diagnostics);
+        static::assertSame('deprecated_attribute_missing_phpdoc_tag', $diagnostics[0]->id());
+        static::assertSame(
+            ['display_name' => 'voku\tests\old_function()'],
+            $diagnostics[0]->evidence()
+        );
+    }
+
     public function testPhp8ModernFeatureSupportSmoke(): void
     {
         $code = '<?php

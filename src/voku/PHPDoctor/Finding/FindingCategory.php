@@ -21,6 +21,15 @@ final class FindingCategory
         $this->value = $value;
     }
 
+    public static function fromValue(string $value): self
+    {
+        if (!\in_array($value, self::knownValues(), true)) {
+            throw new \InvalidArgumentException('Unsupported finding category "' . $value . '".');
+        }
+
+        return new self($value);
+    }
+
     public static function fromMessage(string $message): self
     {
         $messageLower = \strtolower($message);
@@ -75,5 +84,13 @@ final class FindingCategory
             self::OVERRIDE_CONTRACT => 0,
             self::OTHER => 0,
         ];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function knownValues(): array
+    {
+        return \array_keys(self::summaryTemplate());
     }
 }

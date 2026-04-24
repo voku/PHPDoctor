@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\Baseline;
 
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
 
 final class BaselineBuilder
@@ -13,14 +15,15 @@ final class BaselineBuilder
      */
     public static function fromErrors(array $errors): Baseline
     {
-        $findings = [];
-        foreach ($errors as $file => $messages) {
-            foreach ($messages as $message) {
-                $findings[] = Finding::fromMessage((string) $file, $message);
-            }
-        }
+        return self::fromFindings(self::findingsFromErrors($errors));
+    }
 
-        return self::fromFindings($findings);
+    /**
+     * @param array<string, list<string>> $errors
+     */
+    public static function fromErrorsAndDiagnostics(array $errors, DiagnosticCollection $diagnostics): Baseline
+    {
+        return self::fromFindings(DiagnosticToFindingMapper::mapAll($errors, $diagnostics));
     }
 
     /**
@@ -40,5 +43,22 @@ final class BaselineBuilder
                 $findings
             )
         );
+    }
+
+    /**
+     * @param array<string, list<string>> $errors
+     *
+     * @return list<Finding>
+     */
+    private static function findingsFromErrors(array $errors): array
+    {
+        $findings = [];
+        foreach ($errors as $file => $messages) {
+            foreach ($messages as $message) {
+                $findings[] = Finding::fromMessage((string) $file, $message);
+            }
+        }
+
+        return $findings;
     }
 }
