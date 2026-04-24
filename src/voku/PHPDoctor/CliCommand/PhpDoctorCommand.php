@@ -233,8 +233,7 @@ final class PhpDoctorCommand extends Command
             skipFunctionsWithLeadingUnderscore: $skipFunctionsWithLeadingUnderscore,
             skipParseErrorsAsError: $skipParseErrorsAsError,
             autoloaderProjectPaths: $this->autoloaderProjectPaths,
-            pathExcludeRegex: [$pathExcludeRegex],
-            fileExtensions: \explode('|', $fileExtensions)
+            pathExcludeRegex: [$pathExcludeRegex]
         );
 
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
@@ -346,7 +345,7 @@ final class PhpDoctorCommand extends Command
     {
         $json = \json_encode($data, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
         if (!\is_string($json)) {
-            throw new \RuntimeException('Could not encode PHPDoctor profile as JSON.');
+            throw new \RuntimeException('Could not encode PHPDoctor profile as JSON: ' . \json_last_error_msg());
         }
 
         return $json;

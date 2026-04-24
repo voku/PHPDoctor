@@ -1203,7 +1203,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     {
         $profile = QualityProfile::fromErrors(
             [
-                '' => [
+                'test_file.php' => [
                     '[3]: missing property type for voku\tests\SimpleClass->$foo',
                     '[8]: wrong return type "string" in phpdoc from voku\tests\WrongDoc->foo()',
                     '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
