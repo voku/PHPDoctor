@@ -101,7 +101,7 @@ final class PhpDoctorCommand extends Command
                  'file-extensions',
                  null,
                  InputOption::VALUE_OPTIONAL,
-                 'Check different file extensions e.g. ".php|.php4|.php5|.inc"',
+                 'Check pipe-delimited file extensions e.g. ".php|.php4|.php5|.inc"',
                  '.php'
              )->addOption(
                  'profile',
@@ -250,10 +250,10 @@ final class PhpDoctorCommand extends Command
             }
 
             $baselineJson = self::jsonEncode($qualityProfile);
-            $writeError = null;
+            $writeErrors = [];
             \set_error_handler(
-                static function (int $severity, string $message) use (&$writeError): bool {
-                    $writeError = '[' . self::errorSeverityToString($severity) . '] ' . $message;
+                static function (int $severity, string $message) use (&$writeErrors): bool {
+                    $writeErrors[] = '[' . self::errorSeverityToString($severity) . '] ' . $message;
 
                     return \in_array($severity, self::SUPPRESSIBLE_WRITE_ERROR_SEVERITIES, true);
                 }
@@ -264,7 +264,7 @@ final class PhpDoctorCommand extends Command
             if ($writeResult === false) {
                 $output->writeln('-------------------------------');
                 $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
-                if ($writeError !== null) {
+                foreach ($writeErrors as $writeError) {
                     $output->writeln('Reason: ' . $writeError);
                 }
                 $output->writeln('-------------------------------');
