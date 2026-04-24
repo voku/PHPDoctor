@@ -2,6 +2,10 @@
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\PHPDoctor\Diagnostic\Diagnostic;
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticId;
+
 /**
  * @internal
  */
@@ -25,6 +29,39 @@ final class CheckFunctions
         bool $skipParseErrorsAsError,
         array $error
     ): array {
+        return self::checkFunctionsWithDiagnostics(
+            $phpInfo,
+            $skipDeprecatedFunctions,
+            $skipFunctionsWithLeadingUnderscore,
+            $skipAmbiguousTypesAsError,
+            $skipParseErrorsAsError,
+            $error,
+            DiagnosticCollection::empty()
+        )['errors'];
+    }
+
+    /**
+     * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+     * @param bool                                                 $skipDeprecatedFunctions
+     * @param bool                                                 $skipFunctionsWithLeadingUnderscore
+     * @param bool                                                 $skipAmbiguousTypesAsError
+     * @param bool                                                 $skipParseErrorsAsError
+     * @param string[][]                                           $error
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
+    public static function checkFunctionsWithDiagnostics(
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
+        bool $skipDeprecatedFunctions,
+        bool $skipFunctionsWithLeadingUnderscore,
+        bool $skipAmbiguousTypesAsError,
+        bool $skipParseErrorsAsError,
+        array $error,
+        DiagnosticCollection $diagnostics
+    ): array {
         $functions = $phpInfo->getFunctions();
 
         foreach ($phpInfo->getFunctionsInfo(
@@ -33,9 +70,9 @@ final class CheckFunctions
         ) as $functionName => $functionInfo) {
             $function = $functions[$functionName] ?? null;
             if ($function instanceof \voku\SimplePhpParser\Model\PHPFunction) {
-                $error = self::checkDeprecatedAttributeOnFunction(
+                $diagnostics = self::checkDeprecatedAttributeOnFunction(
                     $function,
-                    $error
+                    $diagnostics
                 );
             }
 
@@ -91,29 +128,36 @@ final class CheckFunctions
             }
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 
     /**
-     * @param string[][] $error
-     *
-     * @return string[][]
+     * @return DiagnosticCollection
      */
     private static function checkDeprecatedAttributeOnFunction(
         \voku\SimplePhpParser\Model\PHPFunction $function,
-        array $error
-    ): array {
+        DiagnosticCollection $diagnostics
+    ): DiagnosticCollection {
         if (
             !AttributeHelper::hasAttributeNamed($function->attributes, 'Deprecated')
             ||
             $function->hasDeprecatedTag
         ) {
-            return $error;
+            return $diagnostics;
         }
 
-        $error[$function->file ?? ''][] = '[' . ($function->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $function->name . '()';
-
-        return $error;
+        return $diagnostics->with(
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                $function->file ?? '',
+                $function->line,
+                ['display_name' => $function->name . '()']
+            )
+        );
     }
 
     /**

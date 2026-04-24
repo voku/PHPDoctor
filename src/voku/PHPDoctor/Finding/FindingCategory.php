@@ -21,6 +21,11 @@ final class FindingCategory
         $this->value = $value;
     }
 
+    public static function fromValue(string $value): self
+    {
+        return new self($value);
+    }
+
     public static function fromMessage(string $message): self
     {
         $messageLower = \strtolower($message);
