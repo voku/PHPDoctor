@@ -380,6 +380,107 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testDeprecatedClassDiagnosticsPreserveLegacyOutput(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        #[\Deprecated]
+        class OldClass
+        {
+        }';
+
+        $analysisResult = PhpCodeChecker::checkFromStringWithDiagnostics($code);
+        $errors = $analysisResult['errors'][''] ?? [];
+        $diagnostics = $analysisResult['diagnostics']->all();
+
+        static::assertSame(
+            ['[4]: missing @deprecated tag in phpdoc from voku\tests\OldClass'],
+            $errors
+        );
+        static::assertCount(1, $diagnostics);
+        static::assertSame('deprecated_attribute_missing_phpdoc_tag', $diagnostics[0]->id());
+        static::assertSame(
+            ['display_name' => 'voku\tests\OldClass'],
+            $diagnostics[0]->evidence()
+        );
+    }
+
+    public function testDeprecatedMethodDiagnosticsPreserveLegacyOutput(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class OldClass
+        {
+            #[\Deprecated]
+            public function oldMethod(string $value): string
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::checkFromStringWithDiagnostics($code);
+        $errors = $analysisResult['errors'][''] ?? [];
+        $diagnostics = $analysisResult['diagnostics']->all();
+
+        static::assertSame(
+            ['[6]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()'],
+            $errors
+        );
+        static::assertCount(1, $diagnostics);
+        static::assertSame('deprecated_attribute_missing_phpdoc_tag', $diagnostics[0]->id());
+        static::assertSame(
+            ['display_name' => 'voku\tests\OldClass->oldMethod()'],
+            $diagnostics[0]->evidence()
+        );
+    }
+
+    public function testParseErrorDiagnosticsPreserveLegacyOutput(): void
+    {
+        $code = "<?php\nfunction broken( {\n";
+        $analysisResult = PhpCodeChecker::checkFromStringWithDiagnostics(
+            $code,
+            ['public', 'protected', 'private'],
+            false,
+            false,
+            false,
+            false
+        );
+        $errors = $analysisResult['errors'][''] ?? [];
+        $diagnostics = $analysisResult['diagnostics']->all();
+
+        static::assertCount(1, $errors);
+        static::assertStringContainsString('Syntax error, unexpected', $errors[0]);
+        static::assertStringContainsString('T_VARIABLE', $errors[0]);
+        static::assertCount(1, $diagnostics);
+        static::assertSame('parser_syntax_error', $diagnostics[0]->id());
+        static::assertSame(['legacy_message' => $errors[0]], $diagnostics[0]->evidence());
+    }
+
+    public function testParseErrorsEnabledBehaviorRemainsUnchanged(): void
+    {
+        $file = \sys_get_temp_dir() . '/phpdoctor-parse-error-' . \bin2hex(\random_bytes(8)) . '.php';
+        \file_put_contents($file, "<?php\nfunction broken( {\n");
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [$file],
+                '--skip-parse-errors' => 'false',
+            ]);
+
+            static::assertSame(1, $exitCode);
+            static::assertStringContainsString('Syntax error, unexpected', $tester->getDisplay());
+            static::assertStringContainsString('T_VARIABLE', $tester->getDisplay());
+        } finally {
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+        }
+    }
+
     public function testPhp8ModernFeatureSupportSmoke(): void
     {
         $code = '<?php
@@ -1267,6 +1368,68 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         } finally {
             if (\is_file($baselineFile)) {
                 \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testCommandBaselineAllowsExistingDeprecatedAttributeDiagnostics(): void
+    {
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-deprecated-baseline-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
+        \mkdir($directory);
+        $file = $directory . '/DeprecatedExample.php';
+        $baselineFile = $directory . '/baseline.json';
+
+        \file_put_contents(
+            $file,
+            <<<'PHP'
+<?php
+
+namespace voku\tests;
+
+class DeprecatedExample
+{
+    #[\Deprecated]
+    public function oldMethod(string $value): string
+    {
+        return $value;
+    }
+}
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+            $generateExitCode = $tester->execute([
+                'path' => [$file],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+                '--generate-baseline' => 'true',
+            ]);
+
+            static::assertSame(0, $generateExitCode);
+            static::assertFileExists($baselineFile);
+
+            $tester = $this->buildCommandTester();
+            $baselineExitCode = $tester->execute([
+                'path' => [$file],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(0, $baselineExitCode);
+            static::assertStringContainsString('0 new errors detected', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
             }
         }
     }

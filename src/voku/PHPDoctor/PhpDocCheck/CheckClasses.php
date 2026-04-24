@@ -2,6 +2,11 @@
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\PHPDoctor\Diagnostic\Diagnostic;
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticId;
+use voku\PHPDoctor\Diagnostic\DiagnosticToLegacyMessageMapper;
+
 /**
  * @internal
  */
@@ -27,10 +32,58 @@ final class CheckClasses
         bool                                                 $skipParseErrorsAsError,
         array                                                $error
     ): array {
+        $result = self::checkClassesWithDiagnostics(
+            $phpInfo,
+            $access,
+            $skipDeprecatedMethods,
+            $skipMethodsWithLeadingUnderscore,
+            $skipAmbiguousTypesAsError,
+            $skipParseErrorsAsError,
+            $error,
+            DiagnosticCollection::empty()
+        );
+
+        foreach ($result['diagnostics']->all() as $diagnostic) {
+            $result['errors'][$diagnostic->file()][] = DiagnosticToLegacyMessageMapper::map($diagnostic);
+        }
+
+        foreach ($result['errors'] as &$errorsInner) {
+            \natsort($errorsInner);
+            $errorsInner = \array_values($errorsInner);
+        }
+
+        return $result['errors'];
+    }
+
+    /**
+     * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
+     * @param string[]                                             $access
+     * @param bool                                                 $skipDeprecatedMethods
+     * @param bool                                                 $skipMethodsWithLeadingUnderscore
+     * @param bool                                                 $skipAmbiguousTypesAsError
+     * @param bool                                                 $skipParseErrorsAsError
+     * @param string[][]                                           $error
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection      $diagnostics
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: \voku\PHPDoctor\Diagnostic\DiagnosticCollection
+     * }
+     */
+    public static function checkClassesWithDiagnostics(
+        \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo,
+        array                                                $access,
+        bool                                                 $skipDeprecatedMethods,
+        bool                                                 $skipMethodsWithLeadingUnderscore,
+        bool                                                 $skipAmbiguousTypesAsError,
+        bool                                                 $skipParseErrorsAsError,
+        array                                                $error,
+        DiagnosticCollection                                 $diagnostics
+    ): array {
         foreach (array_merge($phpInfo->getTraits(), $phpInfo->getClasses()) as $class) {
-            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+            $diagnostics = self::checkDeprecatedAttributeOnClassLikeElement(
                 $class,
-                $error
+                $diagnostics
             );
 
             $error = self::checkConstantsDeprecatedAttribute(
@@ -54,14 +107,15 @@ final class CheckClasses
                 $skipMethodsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
                 $skipParseErrorsAsError,
-                $error
+                $error,
+                $diagnostics
             );
         }
 
         foreach ($phpInfo->getInterfaces() as $interface) {
-            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+            $diagnostics = self::checkDeprecatedAttributeOnClassLikeElement(
                 $interface,
-                $error
+                $diagnostics
             );
 
             $error = self::checkConstantsDeprecatedAttribute(
@@ -77,14 +131,15 @@ final class CheckClasses
                 $skipMethodsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
                 $skipParseErrorsAsError,
-                $error
+                $error,
+                $diagnostics
             );
         }
 
         foreach ($phpInfo->getEnums() as $enum) {
-            $error = self::checkDeprecatedAttributeOnClassLikeElement(
+            $diagnostics = self::checkDeprecatedAttributeOnClassLikeElement(
                 $enum,
-                $error
+                $diagnostics
             );
 
             $error = self::checkConstantsDeprecatedAttribute(
@@ -100,11 +155,17 @@ final class CheckClasses
                 $skipMethodsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
                 $skipParseErrorsAsError,
-                $error
+                $error,
+                $diagnostics
             );
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 
     /**
@@ -116,6 +177,7 @@ final class CheckClasses
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param bool                                     $skipParseErrorsAsError
      * @param string[][]                               $error
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
      * @return string[][]
      */
@@ -127,7 +189,8 @@ final class CheckClasses
         bool                                     $skipMethodsWithLeadingUnderscore,
         bool                                     $skipAmbiguousTypesAsError,
         bool                                     $skipParseErrorsAsError,
-        array                                    $error
+        array                                    $error,
+        DiagnosticCollection                     &$diagnostics
     ): array
     {
         foreach (self::getMethodsInfoFromElement(
@@ -148,10 +211,10 @@ final class CheckClasses
 
             $method = $class->methods[$methodName] ?? null;
             if ($method instanceof \voku\SimplePhpParser\Model\PHPMethod) {
-                $error = self::checkDeprecatedAttributeOnMethod(
+                $diagnostics = self::checkDeprecatedAttributeOnMethod(
                     $method,
                     ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
-                    $error
+                    $diagnostics
                 );
             }
 
@@ -615,48 +678,54 @@ final class CheckClasses
     }
 
     /**
-     * @param string[][] $error
-     *
-     * @return string[][]
+     * @return \voku\PHPDoctor\Diagnostic\DiagnosticCollection
      */
     private static function checkDeprecatedAttributeOnClassLikeElement(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
-        array $error
-    ): array {
+        DiagnosticCollection $diagnostics
+    ): DiagnosticCollection {
         if (
             !AttributeHelper::hasAttributeNamed($class->attributes, 'Deprecated')
             ||
             $class->hasDeprecatedTag
         ) {
-            return $error;
+            return $diagnostics;
         }
 
-        $error[$class->file ?? ''][] = '[' . ($class->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . ($class->name ?? '?');
-
-        return $error;
+        return $diagnostics->with(
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                $class->file ?? '',
+                $class->line,
+                ['display_name' => $class->name ?? '?']
+            )
+        );
     }
 
     /**
-     * @param string[][] $error
-     *
-     * @return string[][]
+     * @return \voku\PHPDoctor\Diagnostic\DiagnosticCollection
      */
     private static function checkDeprecatedAttributeOnMethod(
         \voku\SimplePhpParser\Model\PHPMethod $method,
         string $methodDisplayName,
-        array $error
-    ): array {
+        DiagnosticCollection $diagnostics
+    ): DiagnosticCollection {
         if (
             !AttributeHelper::hasAttributeNamed($method->attributes, 'Deprecated')
             ||
             $method->hasDeprecatedTag
         ) {
-            return $error;
+            return $diagnostics;
         }
 
-        $error[$method->file ?? ''][] = '[' . ($method->line ?? '?') . ']: missing @deprecated tag in phpdoc from ' . $methodDisplayName;
-
-        return $error;
+        return $diagnostics->with(
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                $method->file ?? '',
+                $method->line,
+                ['display_name' => $methodDisplayName]
+            )
+        );
     }
 
     /**

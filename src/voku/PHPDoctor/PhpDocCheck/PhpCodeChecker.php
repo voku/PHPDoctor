@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\PHPDoctor\Diagnostic\Diagnostic;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticId;
 use voku\PHPDoctor\Diagnostic\DiagnosticToLegacyMessageMapper;
 use voku\SimplePhpParser\Parsers\PhpCodeParser;
 
@@ -137,6 +139,7 @@ final class PhpCodeChecker
         /** @var array<string, array<int, string>> $errors */
         $errors = [];
         $diagnostics = DiagnosticCollection::empty();
+        $parseErrors = [];
 
         if (!\is_array($path)) {
             $path = [$path];
@@ -151,7 +154,7 @@ final class PhpCodeChecker
             );
 
             if (!$skipParseErrorsAsError) {
-                $errors[''] = $phpInfo->getParseErrors();
+                $parseErrors = \array_values($phpInfo->getParseErrors());
             }
 
             $functionCheckResult = CheckFunctions::checkFunctionsWithDiagnostics(
@@ -166,15 +169,22 @@ final class PhpCodeChecker
             $errors = $functionCheckResult['errors'];
             $diagnostics = $functionCheckResult['diagnostics'];
 
-            $errors = CheckClasses::checkClasses(
+            $classCheckResult = CheckClasses::checkClassesWithDiagnostics(
                 $phpInfo,
                 $access,
                 $skipDeprecatedFunctions,
                 $skipFunctionsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
                 $skipParseErrorsAsError,
-                $errors
+                $errors,
+                $diagnostics
             );
+            $errors = $classCheckResult['errors'];
+            $diagnostics = $classCheckResult['diagnostics'];
+        }
+
+        if (!$skipParseErrorsAsError) {
+            $diagnostics = self::parseErrorDiagnosticsFromMessages($parseErrors, $diagnostics);
         }
 
         // Keep the legacy string errors for unchanged text output and external callers
@@ -193,5 +203,31 @@ final class PhpCodeChecker
             'errors' => $errors,
             'diagnostics' => $diagnostics,
         ];
+    }
+
+    /**
+     * @param list<string> $parseErrors
+     */
+    private static function parseErrorDiagnosticsFromMessages(
+        array $parseErrors,
+        DiagnosticCollection $diagnostics
+    ): DiagnosticCollection {
+        foreach ($parseErrors as $parseError) {
+            $line = null;
+            if (\preg_match('/^\[(\d+)\]: /', $parseError, $matches) === 1) {
+                $line = (int) $matches[1];
+            }
+
+            $diagnostics = $diagnostics->with(
+                new Diagnostic(
+                    DiagnosticId::PARSER_SYNTAX_ERROR,
+                    '',
+                    $line,
+                    ['legacy_message' => $parseError]
+                )
+            );
+        }
+
+        return $diagnostics;
     }
 }
