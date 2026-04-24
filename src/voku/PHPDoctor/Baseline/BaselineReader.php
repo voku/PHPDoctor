@@ -6,6 +6,8 @@ namespace voku\PHPDoctor\Baseline;
 
 final class BaselineReader
 {
+    private const LEGACY_GENERATED_AT = '1970-01-01T00:00:00+00:00';
+
     /**
      * @throws \RuntimeException
      * @throws \JsonException
@@ -81,7 +83,7 @@ final class BaselineReader
         }
 
         return new Baseline(
-            \gmdate('c'),
+            self::LEGACY_GENERATED_AT,
             self::normalizeFindings($baseline['findings'], true)
         );
     }
