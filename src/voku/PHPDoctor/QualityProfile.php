@@ -110,11 +110,11 @@ final class QualityProfile
     {
         $messageLower = \strtolower($message);
 
-        if (\str_contains($message, 'missing @deprecated tag')) {
+        if (\str_contains($messageLower, 'missing @deprecated tag')) {
             return self::CATEGORY_DEPRECATED_DOCUMENTATION;
         }
 
-        if (\str_contains($message, 'invalid #[\Override] usage')) {
+        if (\str_contains($messageLower, 'invalid #[\override] usage')) {
             return self::CATEGORY_OVERRIDE_CONTRACT;
         }
 

@@ -1290,6 +1290,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 'test_file.php' => [
                     '[39]: foo_broken:39 | Unexpected token "", expected \'}\' at offset 45 on line 1',
+                    // Keep the trailing whitespace because this mirrors the parser output format seen in production.
                     '[48]: foo_ignore:48 | Unexpected token "/>", expected \'>\' at offset 33 on line 1 ',
                 ],
             ]
