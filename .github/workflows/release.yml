@@ -40,7 +40,7 @@ jobs:
           php phpdoctor.phar analyse --help
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: phpdoctor.phar
           generate_release_notes: true
