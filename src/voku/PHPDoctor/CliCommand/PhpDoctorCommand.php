@@ -346,7 +346,7 @@ final class PhpDoctorCommand extends Command
     {
         $json = \json_encode($data, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
         if (!\is_string($json)) {
-            throw new \RuntimeException('Could not encode PHPDoctor profile as JSON: ' . \json_last_error_msg());
+            throw new \RuntimeException('Unexpected internal failure encoding the PHPDoctor profile as JSON: ' . \json_last_error_msg());
         }
 
         return $json;
