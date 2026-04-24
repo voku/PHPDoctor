@@ -1316,6 +1316,45 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         }
     }
 
+    public function testCommandRejectsSchemaVersionOneBaselineFindingWithoutRequiredFields(): void
+    {
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-invalid-baseline-finding-schema-');
+        static::assertIsString($baselineFile);
+        \file_put_contents(
+            $baselineFile,
+            (string) \json_encode(
+                [
+                    'schema_version' => 1,
+                    'tool' => 'phpdoctor',
+                    'scope' => 'type_and_phpdoc_quality',
+                    'generated_at' => '2026-04-24T00:00:00+00:00',
+                    'findings' => [
+                        [
+                            'fingerprint' => 'only-fingerprint',
+                        ],
+                    ],
+                ],
+                \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES
+            )
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(2, $exitCode);
+            static::assertStringContainsString('supported baseline schema', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
     public function testCommandRejectsMissingBaselineFile(): void
     {
         $baselineFile = \sys_get_temp_dir() . '/phpdoctor-missing-baseline-' . \bin2hex(\random_bytes(8)) . '.json';

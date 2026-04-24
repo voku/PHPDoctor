@@ -109,6 +109,28 @@ final class BaselineReader
                 throw new \UnexpectedValueException('The baseline file does not contain a supported baseline schema.');
             }
 
+            if (!$legacy) {
+                if (
+                    !\array_key_exists('category', $finding)
+                    || !\is_string($finding['category'])
+                    || !\array_key_exists('file', $finding)
+                    || !\is_string($finding['file'])
+                    || !\array_key_exists('line', $finding)
+                    || (!\is_int($finding['line']) && $finding['line'] !== null)
+                ) {
+                    throw new \UnexpectedValueException('The baseline file does not contain a supported baseline schema.');
+                }
+
+                $normalizedFindings[] = [
+                    'fingerprint' => $finding['fingerprint'],
+                    'category' => $finding['category'],
+                    'file' => $finding['file'],
+                    'line' => $finding['line'],
+                ];
+
+                continue;
+            }
+
             $line = null;
             if (\array_key_exists('line', $finding)) {
                 if (!\is_int($finding['line']) && $finding['line'] !== null) {
@@ -120,22 +142,14 @@ final class BaselineReader
 
             $file = '';
             if (\array_key_exists('file', $finding)) {
-                if (!\is_string($finding['file'])) {
-                    if (!$legacy) {
-                        throw new \UnexpectedValueException('The baseline file does not contain a supported baseline schema.');
-                    }
-                } else {
+                if (\is_string($finding['file'])) {
                     $file = $finding['file'];
                 }
             }
 
             $category = '';
             if (\array_key_exists('category', $finding)) {
-                if (!\is_string($finding['category'])) {
-                    if (!$legacy) {
-                        throw new \UnexpectedValueException('The baseline file does not contain a supported baseline schema.');
-                    }
-                } else {
+                if (\is_string($finding['category'])) {
                     $category = $finding['category'];
                 }
             }
