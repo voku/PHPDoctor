@@ -1236,6 +1236,22 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         }
     }
 
+    public function testCommandRejectsMissingBaselineFile(): void
+    {
+        $baselineFile = \sys_get_temp_dir() . '/phpdoctor-missing-baseline-' . \bin2hex(\random_bytes(8)) . '.json';
+        static::assertFileDoesNotExist($baselineFile);
+
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--baseline-file' => $baselineFile,
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('does not exist', $tester->getDisplay());
+    }
+
     public function testCommandRejectsUnsupportedOutputFormat(): void
     {
         $tester = $this->buildCommandTester();
@@ -1447,6 +1463,134 @@ PHP
                 \rmdir($directory);
             }
         }
+    }
+
+    public function testCommandExecuteSkipsFilesWithExtensionsNotConfigured(): void
+    {
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-ext-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
+        \mkdir($directory);
+        $file = $directory . '/Broken.inc';
+        \file_put_contents(
+            $file,
+            <<<'PHP'
+<?php
+
+function broken_extension_file($value) {
+    return $value;
+}
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [$directory],
+                '--path-exclude-regex' => '#/vendor/#i',
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+        } finally {
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
+    public function testCommandChangedFindingFailsAgainstBaseline(): void
+    {
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-baseline-case-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
+        \mkdir($directory);
+        $file = $directory . '/Existing.php';
+        $newFile = $directory . '/New.php';
+        $baselineFile = $directory . '/baseline.json';
+
+        \file_put_contents(
+            $file,
+            <<<'PHP'
+<?php
+
+function broken_existing($value) {
+    return $value;
+}
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+            $generateExitCode = $tester->execute([
+                'path' => [$file],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+                '--generate-baseline' => 'true',
+            ]);
+
+            static::assertSame(0, $generateExitCode);
+            static::assertFileExists($baselineFile);
+
+            \file_put_contents(
+                $newFile,
+                <<<'PHP'
+<?php
+
+function broken_new($value) {
+    return $value;
+}
+PHP
+            );
+
+            $tester = $this->buildCommandTester();
+            $exitCode = $tester->execute([
+                'path' => [$directory],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(1, $exitCode);
+            static::assertStringContainsString('2 new errors detected', $tester->getDisplay());
+            static::assertStringContainsString('broken_new()', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+            if (\is_file($newFile)) {
+                \unlink($newFile);
+            }
+            if (\is_file($file)) {
+                \unlink($file);
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
+    public function testCommandGenerateBaselineRejectsMissingTargetDirectory(): void
+    {
+        $baselineFile = \sys_get_temp_dir() . '/phpdoctor-missing-dir-' . \bin2hex(\random_bytes(8)) . '/baseline.json';
+        static::assertFalse(\is_dir(\dirname($baselineFile)));
+
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--baseline-file' => $baselineFile,
+            '--generate-baseline' => 'true',
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('directory', $tester->getDisplay());
+        static::assertStringContainsString('does not exist', $tester->getDisplay());
     }
 
     // =========================================================================

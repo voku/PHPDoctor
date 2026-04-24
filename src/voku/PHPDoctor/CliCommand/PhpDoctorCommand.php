@@ -20,7 +20,6 @@ final class PhpDoctorCommand extends Command
 {
     public const COMMAND_NAME = 'analyse';
     public const ALIASES = ['analyze'];
-    private const SUPPRESSIBLE_WRITE_ERROR_SEVERITIES = [\E_WARNING, \E_NOTICE, \E_USER_WARNING, \E_USER_NOTICE];
 
     /**
      * @var string[]
@@ -182,6 +181,7 @@ final class PhpDoctorCommand extends Command
 
         $fileExtensions = $input->getOption('file-extensions');
         \assert(\is_string($fileExtensions));
+        $fileExtensions = self::parsePipeSeparatedList($fileExtensions);
 
         $profileSummaryEnabled = $input->getOption('profile') !== 'false';
 
@@ -201,7 +201,15 @@ final class PhpDoctorCommand extends Command
         $generateBaseline = $input->getOption('generate-baseline') !== 'false';
 
         $baselineFingerprints = [];
-        if (!$generateBaseline && $baselineFile !== '' && \is_file($baselineFile)) {
+        if (!$generateBaseline && $baselineFile !== '') {
+            if (!\is_file($baselineFile)) {
+                $output->writeln('-------------------------------');
+                $output->writeln('The baseline-file "' . $baselineFile . '" does not exist.');
+                $output->writeln('-------------------------------');
+
+                return 2;
+            }
+
             $baselineProfile = self::readJsonFile($baselineFile);
             if ($baselineProfile === null) {
                 $output->writeln('-------------------------------');
@@ -235,7 +243,7 @@ final class PhpDoctorCommand extends Command
             skipParseErrorsAsError: $skipParseErrorsAsError,
             autoloaderProjectPaths: $this->autoloaderProjectPaths,
             pathExcludeRegex: [$pathExcludeRegex],
-            fileExtensions: \explode('|', $fileExtensions)
+            fileExtensions: $fileExtensions
         );
 
         $qualityProfile = QualityProfile::fromErrors($errors, $baselineFingerprints);
@@ -249,24 +257,21 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            $baselineJson = self::jsonEncode($qualityProfile);
-            $writeErrors = [];
-            \set_error_handler(
-                static function (int $severity, string $message) use (&$writeErrors): bool {
-                    $writeErrors[] = '[' . self::errorSeverityToString($severity) . '] ' . $message;
+            $baselineWriteValidationError = self::validateBaselineWriteTarget($baselineFile);
+            if ($baselineWriteValidationError !== null) {
+                $output->writeln('-------------------------------');
+                $output->writeln($baselineWriteValidationError);
+                $output->writeln('-------------------------------');
 
-                    return \in_array($severity, self::SUPPRESSIBLE_WRITE_ERROR_SEVERITIES, true);
-                }
-            );
+                return 2;
+            }
+
+            $baselineJson = self::jsonEncode($qualityProfile);
             $writeResult = \file_put_contents($baselineFile, $baselineJson . "\n");
-            \restore_error_handler();
 
             if ($writeResult === false) {
                 $output->writeln('-------------------------------');
                 $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
-                foreach ($writeErrors as $writeError) {
-                    $output->writeln('Reason: ' . $writeError);
-                }
                 $output->writeln('-------------------------------');
 
                 return 2;
@@ -340,38 +345,42 @@ final class PhpDoctorCommand extends Command
         return $decoded;
     }
 
-    /**
-     * @param mixed $data
-     */
-    private static function jsonEncode($data): string
+    private static function jsonEncode(mixed $data): string
     {
-        $json = \json_encode($data, \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
-        if (!\is_string($json)) {
-            throw new \RuntimeException('Unexpected internal failure encoding the PHPDoctor profile as JSON: ' . \json_last_error_msg());
-        }
-
-        return $json;
+        return \json_encode($data, \JSON_THROW_ON_ERROR | \JSON_PRETTY_PRINT | \JSON_UNESCAPED_SLASHES);
     }
 
-    private static function errorSeverityToString(int $severity): string
+    private static function validateBaselineWriteTarget(string $baselineFile): ?string
     {
-        return match ($severity) {
-            \E_ERROR => 'E_ERROR',
-            \E_WARNING => 'E_WARNING',
-            \E_PARSE => 'E_PARSE',
-            \E_NOTICE => 'E_NOTICE',
-            \E_CORE_ERROR => 'E_CORE_ERROR',
-            \E_CORE_WARNING => 'E_CORE_WARNING',
-            \E_COMPILE_ERROR => 'E_COMPILE_ERROR',
-            \E_COMPILE_WARNING => 'E_COMPILE_WARNING',
-            \E_USER_ERROR => 'E_USER_ERROR',
-            \E_USER_WARNING => 'E_USER_WARNING',
-            \E_USER_NOTICE => 'E_USER_NOTICE',
-            \E_STRICT => 'E_STRICT',
-            \E_RECOVERABLE_ERROR => 'E_RECOVERABLE_ERROR',
-            \E_DEPRECATED => 'E_DEPRECATED',
-            \E_USER_DEPRECATED => 'E_USER_DEPRECATED',
-            default => 'E_UNKNOWN_' . $severity,
-        };
+        $directory = \dirname($baselineFile);
+        if (!\is_dir($directory)) {
+            return 'The baseline-file directory "' . $directory . '" does not exist.';
+        }
+
+        if (!\is_writable($directory)) {
+            return 'The baseline-file directory "' . $directory . '" is not writable.';
+        }
+
+        if (\file_exists($baselineFile) && !\is_writable($baselineFile)) {
+            return 'The baseline-file "' . $baselineFile . '" is not writable.';
+        }
+
+        return null;
+    }
+
+    /**
+     * @return string[]
+     */
+    private static function parsePipeSeparatedList(string $value): array
+    {
+        return \array_values(
+            \array_filter(
+                \array_map(
+                    static fn (string $item): string => \trim($item),
+                    \explode('|', $value)
+                ),
+                static fn (string $item): bool => $item !== ''
+            )
+        );
     }
 }

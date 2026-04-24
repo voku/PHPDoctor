@@ -97,14 +97,28 @@ final class QualityProfile
             $line = (int) $matches[1];
         }
 
+        $category = self::categorizeMessage($message);
+
         return [
             'file'        => $file,
             'line'        => $line,
-            'category'    => self::categorizeMessage($message),
+            'category'    => $category,
             'message'     => $message,
-            // Prefix lengths so separator characters inside the file or message cannot create ambiguous hash input.
-            'fingerprint' => \hash('sha256', \strlen($file) . ':' . $file . '|' . \strlen($message) . ':' . $message),
+            'fingerprint' => self::generateFingerprint($file, $category, $line, $message),
         ];
+    }
+
+    private static function generateFingerprint(string $file, string $category, ?int $line, string $message): string
+    {
+        $normalizedMessage = \preg_replace('/^\[\d+\]:\s*/', '', $message);
+        \assert(\is_string($normalizedMessage));
+
+        return \hash('sha256', \json_encode([
+            'file' => $file,
+            'category' => $category,
+            'line' => $line,
+            'message' => $normalizedMessage,
+        ], \JSON_THROW_ON_ERROR | \JSON_UNESCAPED_SLASHES));
     }
 
     private static function categorizeMessage(string $message): string
