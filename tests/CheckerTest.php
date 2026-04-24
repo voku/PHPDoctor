@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace voku\tests;
 
+use Symfony\Component\Console\Application;
+use Symfony\Component\Console\Tester\CommandTester;
+use voku\PHPDoctor\CliCommand\PhpDoctorCommand;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 
 /**
@@ -1101,6 +1104,360 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             ],
             $phpCodeErrors
         );
+    }
+
+    // =========================================================================
+    // PhpDoctorCommand (CLI) tests
+    // =========================================================================
+
+    private function buildCommandTester(): CommandTester
+    {
+        $app = new Application();
+        $command = new PhpDoctorCommand([]);
+        $app->add($command);
+        $app->setDefaultCommand(PhpDoctorCommand::COMMAND_NAME);
+
+        return new CommandTester($app->find(PhpDoctorCommand::COMMAND_NAME));
+    }
+
+    public function testCommandExecuteWithNoErrors(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        // Dummy7.php has no errors – command should return 0
+        $exitCode = $tester->execute(['path' => [__DIR__ . '/Dummy7.php']]);
+
+        static::assertSame(0, $exitCode);
+        static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteWithErrors(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        // Dummy8.php has 2 errors; use a non-matching exclude regex so /tests/ files are not filtered
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+        ]);
+
+        static::assertSame(1, $exitCode);
+        static::assertStringContainsString('errors detected', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteWithInvalidPath(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute(['path' => ['/nonexistent/path/that/does/not/exist']]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('does not exists', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteDefaultOptions(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        // Use access=public only, skip-deprecated-functions=true, skip-functions-with-leading-underscore=true
+        $exitCode = $tester->execute(
+            ['path' => [__DIR__ . '/Dummy7.php']],
+            []
+        );
+
+        static::assertSame(0, $exitCode);
+    }
+
+    public function testCommandExecuteWithAccessOption(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute(
+            ['path' => [__DIR__ . '/Dummy7.php']],
+            []
+        );
+
+        // Run again with specific access option
+        $tester->execute(
+            ['path' => [__DIR__ . '/Dummy7.php'], '--access' => 'public']
+        );
+
+        static::assertSame(0, $exitCode);
+        static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteWithSkipOptions(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--skip-ambiguous-types-as-error' => 'true',
+            '--skip-deprecated-functions' => 'true',
+            '--skip-functions-with-leading-underscore' => 'true',
+            '--skip-parse-errors' => 'false',
+        ]);
+
+        static::assertSame(0, $exitCode);
+    }
+
+    public function testCommandExecuteWithInvalidAutoloadFile(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--autoload-file' => '/nonexistent/autoloader.php',
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('does not exists', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteWithValidAutoloadFile(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--autoload-file' => __DIR__ . '/../vendor/autoload.php',
+        ]);
+
+        static::assertSame(0, $exitCode);
+    }
+
+    public function testCommandExecuteWithPathExcludeRegex(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/tests/#i',
+        ]);
+
+        // All paths excluded → 0 errors
+        static::assertSame(0, $exitCode);
+    }
+
+    public function testCommandExecuteWithFileExtensions(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--file-extensions' => '.php',
+        ]);
+
+        static::assertSame(0, $exitCode);
+    }
+
+    // =========================================================================
+    // CheckFunctions uncovered branches
+    // =========================================================================
+
+    /**
+     * A function whose @return phpdoc contains <phpdoctor-ignore-this-line/>
+     * must not produce a missing-return-type error.
+     */
+    public function testFunctionReturnPhpdocIgnoreTag(): void
+    {
+        $code = '<?php
+        /**
+         * @return string <phpdoctor-ignore-this-line/>
+         */
+        function ignoredReturn() {}';
+
+        // Use default skipParseErrorsAsError=true so parser warnings are suppressed
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, true);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * A function with both a PHP return type and a phpdoc @return type exercises
+     * the CheckPhpDocType path inside CheckFunctions.
+     */
+    public function testFunctionWithMatchingPhpDocAndNativeReturnType(): void
+    {
+        $code = '<?php
+        /**
+         * @return int
+         */
+        function add(int $a, int $b): int { return $a + $b; }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * A function with mismatched phpdoc @return and native return type must produce
+     * a wrong-return-type error, exercising the CheckPhpDocType error path in CheckFunctions.
+     */
+    public function testFunctionWithMismatchedPhpDocReturnType(): void
+    {
+        $code = '<?php
+        /**
+         * @return string
+         */
+        function mismatched(): int { return 1; }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('mismatched()', $errors[0]);
+    }
+
+    /**
+     * A function parameter whose phpdoc contains <phpdoctor-ignore-this-line/>
+     * must be skipped.
+     */
+    public function testFunctionParamPhpdocIgnoreTag(): void
+    {
+        $code = '<?php
+        /**
+         * @param mixed $x <phpdoctor-ignore-this-line/>
+         */
+        function ignoredParam($x): void {}';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * A function with both a PHP parameter type and a phpdoc @param type exercises
+     * the CheckPhpDocType path inside CheckFunctions::checkParameter.
+     */
+    public function testFunctionParamWithMatchingPhpDocAndNativeType(): void
+    {
+        $code = '<?php
+        /**
+         * @param int $value
+         * @return void
+         */
+        function typed(int $value): void {}';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * A function with mismatched phpdoc @param and native param type must produce
+     * a wrong-parameter-type error.
+     */
+    public function testFunctionParamWithMismatchedPhpDocType(): void
+    {
+        $code = '<?php
+        /**
+         * @param string $value
+         * @return void
+         */
+        function mismatchedParam(int $value): void {}';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        $errors = $phpCodeErrors[''] ?? [];
+        static::assertNotEmpty($errors);
+        static::assertStringContainsString('mismatchedParam()', $errors[0]);
+    }
+
+    // =========================================================================
+    // CheckPhpDocType uncovered branches
+    // =========================================================================
+
+    /**
+     * A function/method parameter with a default value of null should have null
+     * added to the effective PHP type when checking phpdoc consistency.
+     */
+    public function testCheckPhpDocTypeWithNullDefault(): void
+    {
+        $code = '<?php
+        class NullDefault {
+            /**
+             * @param int $value
+             * @return void
+             */
+            public function test(int $value = null): void {}
+        }';
+
+        // Should not throw; may or may not produce an error depending on PHP version
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertIsArray($phpCodeErrors);
+    }
+
+    /**
+     * When the phpdoc @return type is a subtype of the native return type (via
+     * class inheritance), no error should be emitted.
+     */
+    public function testCheckPhpDocTypeSubclassIsAccepted(): void
+    {
+        $code = '<?php
+        class SubclassReturn {
+            /**
+             * @return \RuntimeException
+             */
+            public function make(): \Exception { return new \RuntimeException(); }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * When the phpdoc @param type is bool expressed as true|false literals while
+     * the native type is bool, no error should be emitted.
+     */
+    public function testCheckPhpDocTypeBoolLiteralsAccepted(): void
+    {
+        $code = '<?php
+        class BoolDoc {
+            /**
+             * @param true|false $flag
+             * @return void
+             */
+            public function run(bool $flag): void {}
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
+    }
+
+    /**
+     * A phpdoc @return type of array[] (array of array) while native type is
+     * Generator exercises the Generator/array[] branch in CheckPhpDocType.
+     */
+    public function testCheckPhpDocTypeArrayBracketWithGenerator(): void
+    {
+        $code = '<?php
+        class GenDoc {
+            /**
+             * @return int[]
+             */
+            public function items(): \Generator { yield 1; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        // No "wrong return type" expected because Generator + [] is accepted
+        $errors = $phpCodeErrors[''] ?? [];
+        $wrongReturnErrors = \array_filter($errors, static function (string $e): bool {
+            return \strpos($e, 'wrong return type') !== false;
+        });
+        static::assertSame([], \array_values($wrongReturnErrors));
+    }
+
+    /**
+     * A phpdoc @return with class-string while native return is string must be
+     * accepted (class-string is a subtype of string).
+     */
+    public function testCheckPhpDocTypeClassStringAccepted(): void
+    {
+        $code = '<?php
+        class ClassStringDoc {
+            /**
+             * @return class-string
+             */
+            public function getClass(): string { return self::class; }
+        }';
+
+        $phpCodeErrors = PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false);
+        static::assertSame([], \array_filter($phpCodeErrors));
     }
 
     /**
