@@ -380,6 +380,32 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsDeprecatedDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        #[\Deprecated]
+        function old_function(string $value): string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('deprecated_attribute_missing_phpdoc_tag', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing @deprecated tag in phpdoc from voku\tests\old_function()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
     public function testDeprecatedClassDiagnosticsPreserveLegacyOutput(): void
     {
         $code = '<?php
@@ -456,6 +482,48 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertCount(1, $diagnostics);
         static::assertSame('parser_syntax_error', $diagnostics[0]->id());
         static::assertSame(['legacy_message' => $errors[0]], $diagnostics[0]->evidence());
+    }
+
+    public function testAnalyseStringReturnsParseErrorDiagnostics(): void
+    {
+        $code = "<?php\nfunction broken( {\n";
+        $analysisResult = PhpCodeChecker::analyseString(
+            $code,
+            ['public', 'protected', 'private'],
+            false,
+            false,
+            false,
+            false
+        );
+        $errors = $analysisResult->toLegacyErrors()[''] ?? [];
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $errors);
+        static::assertStringContainsString('Syntax error, unexpected', $errors[0]);
+        static::assertStringContainsString('T_VARIABLE', $errors[0]);
+        static::assertCount(1, $diagnostics);
+        static::assertSame('parser_syntax_error', $diagnostics[0]->id());
+        static::assertSame(['legacy_message' => $errors[0]], $diagnostics[0]->evidence());
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArray(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            public $foo;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing property type for voku\tests\SimpleClass->$foo',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false)
+        );
     }
 
     public function testParseErrorsEnabledBehaviorRemainsUnchanged(): void

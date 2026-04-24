@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\PHPDoctor\Analysis\AnalysisResult;
 use voku\PHPDoctor\Diagnostic\Diagnostic;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
 use voku\PHPDoctor\Diagnostic\DiagnosticId;
@@ -30,14 +31,14 @@ final class PhpCodeChecker
         bool $skipFunctionsWithLeadingUnderscore = false,
         bool $skipParseErrorsAsError = true
     ): array {
-        return self::checkFromStringWithDiagnostics(
+        return self::analyseString(
             $code,
             $access,
             $skipAmbiguousTypesAsError,
             $skipDeprecatedMethods,
             $skipFunctionsWithLeadingUnderscore,
             $skipParseErrorsAsError
-        )['errors'];
+        )->toLegacyErrors();
     }
 
     /**
@@ -64,7 +65,7 @@ final class PhpCodeChecker
         array $pathExcludeRegex = [],
         array $fileExtensions = ['.php']
     ): array {
-        return self::checkPhpFilesWithDiagnostics(
+        return self::analyseFiles(
             $path,
             $access,
             $skipAmbiguousTypesAsError,
@@ -74,7 +75,70 @@ final class PhpCodeChecker
             $autoloaderProjectPaths,
             $pathExcludeRegex,
             $fileExtensions
-        )['errors'];
+        )->toLegacyErrors();
+    }
+
+    /**
+     * @param string   $code
+     * @param string[] $access
+     * @param bool     $skipAmbiguousTypesAsError
+     * @param bool     $skipDeprecatedMethods
+     * @param bool     $skipFunctionsWithLeadingUnderscore
+     * @param bool     $skipParseErrorsAsError
+     */
+    public static function analyseString(
+        string $code,
+        array $access = ['public', 'protected', 'private'],
+        bool $skipAmbiguousTypesAsError = false,
+        bool $skipDeprecatedMethods = false,
+        bool $skipFunctionsWithLeadingUnderscore = false,
+        bool $skipParseErrorsAsError = true
+    ): AnalysisResult {
+        return self::analyseFiles(
+            $code,
+            $access,
+            $skipAmbiguousTypesAsError,
+            $skipDeprecatedMethods,
+            $skipFunctionsWithLeadingUnderscore,
+            $skipParseErrorsAsError
+        );
+    }
+
+    /**
+     * @param string|string[] $path
+     * @param bool            $skipAmbiguousTypesAsError
+     * @param string[]        $access
+     * @param bool            $skipDeprecatedFunctions
+     * @param bool            $skipFunctionsWithLeadingUnderscore
+     * @param bool            $skipParseErrorsAsError
+     * @param string[]        $autoloaderProjectPaths
+     * @param string[]        $pathExcludeRegex
+     * @param string[]        $fileExtensions
+     */
+    public static function analyseFiles(
+        string|array $path,
+        array $access = ['public', 'protected', 'private'],
+        bool $skipAmbiguousTypesAsError = false,
+        bool $skipDeprecatedFunctions = false,
+        bool $skipFunctionsWithLeadingUnderscore = false,
+        bool $skipParseErrorsAsError = true,
+        array $autoloaderProjectPaths = [],
+        array $pathExcludeRegex = [],
+        array $fileExtensions = ['.php']
+    ): AnalysisResult {
+        $analysisResult = self::checkPhpFilesWithDiagnostics(
+            $path,
+            $access,
+            $skipAmbiguousTypesAsError,
+            $skipDeprecatedFunctions,
+            $skipFunctionsWithLeadingUnderscore,
+            $skipParseErrorsAsError,
+            $autoloaderProjectPaths,
+            $pathExcludeRegex,
+            $fileExtensions
+        );
+
+        return new AnalysisResult($analysisResult['diagnostics'], $analysisResult['errors']);
     }
 
     /**
