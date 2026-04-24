@@ -181,7 +181,7 @@ final class PhpDoctorCommand extends Command
 
         $fileExtensions = $input->getOption('file-extensions');
         \assert(\is_string($fileExtensions));
-        $fileExtensionsArray = (array) \explode('|', $fileExtensions);
+        $fileExtensionsArray = \explode('|', $fileExtensions);
 
         $profileSummaryEnabled = $input->getOption('profile') !== 'false';
 
@@ -251,7 +251,7 @@ final class PhpDoctorCommand extends Command
             }
 
             $baselineJson = self::jsonEncode($qualityProfile);
-            if (@\file_put_contents($baselineFile, $baselineJson . "\n") === false) {
+            if (\file_put_contents($baselineFile, $baselineJson . "\n") === false) {
                 $output->writeln('-------------------------------');
                 $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
                 $output->writeln('-------------------------------');
@@ -310,7 +310,11 @@ final class PhpDoctorCommand extends Command
      */
     private static function readJsonFile(string $file): ?array
     {
-        $contents = @\file_get_contents($file);
+        if (!\is_readable($file)) {
+            return null;
+        }
+
+        $contents = \file_get_contents($file);
         if (!\is_string($contents)) {
             return null;
         }
