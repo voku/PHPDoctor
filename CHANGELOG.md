@@ -1,8 +1,13 @@
 # Changelog
 
-### 0.6.7 (2026-04-24)
+### [Unreleased]
 
+- feat: detect `#[\Deprecated]` attribute on class constants and properties
+- fix: add `enum_exists` check and missing `@param` tags in docblocks
+- feat: add PHAR release workflow; update `box.json.dist` and README
 - increase code coverage by ~19.5% (from 76% to 95%): add CLI command tests, function type-check branch tests, and phpdoc-type-check branch tests
+- fix: address code review issues (spelling assertions, `?int` null default)
+- update CI: `actions/cache` to v5, `actions/checkout` to v6, `softprops/action-gh-release` to v3
 
 ### 0.6.6 (2026-04-21)
 
