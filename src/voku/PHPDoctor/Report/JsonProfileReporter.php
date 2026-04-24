@@ -9,11 +9,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 final class JsonProfileReporter
 {
     /**
-     * @param mixed $qualityProfile
+     * @param mixed $data
      */
-    public static function write(OutputInterface $output, mixed $qualityProfile): void
+    public static function write(OutputInterface $output, mixed $data): void
     {
-        $output->writeln(self::jsonEncode($qualityProfile));
+        $output->writeln(self::jsonEncode($data));
     }
 
     /**
