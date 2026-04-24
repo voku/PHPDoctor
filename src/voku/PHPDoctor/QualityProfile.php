@@ -108,6 +108,8 @@ final class QualityProfile
 
     private static function categorizeMessage(string $message): string
     {
+        $messageLower = \strtolower($message);
+
         if (\str_contains($message, 'missing @deprecated tag')) {
             return self::CATEGORY_DEPRECATED_DOCUMENTATION;
         }
@@ -117,8 +119,8 @@ final class QualityProfile
         }
 
         if (
-            \stripos($message, 'parse') !== false
-            || \stripos($message, 'syntax error') !== false
+            \str_contains($messageLower, 'parse')
+            || \str_contains($messageLower, 'syntax error')
             || \preg_match('/Unexpected token .* expected .+ on line \d+/i', $message) === 1
         ) {
             return self::CATEGORY_PARSE_ERROR;

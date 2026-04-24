@@ -1216,6 +1216,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     {
         $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-invalid-baseline-');
         static::assertIsString($baselineFile);
+        // Incomplete JSON object to verify baseline parse failures are surfaced.
         \file_put_contents($baselineFile, '{"findings":');
 
         try {
@@ -1406,7 +1407,10 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
     public function testCommandExecuteRespectsCustomFileExtensions(): void
     {
-        $directory = \sys_get_temp_dir() . '/phpdoctor-ext-' . \bin2hex(\random_bytes(8));
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-ext-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
         \mkdir($directory);
         $file = $directory . '/Broken.inc';
         \file_put_contents(
