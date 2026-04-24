@@ -1152,7 +1152,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         $exitCode = $tester->execute(['path' => ['/nonexistent/path/that/does/not/exist']]);
 
         static::assertSame(2, $exitCode);
-        static::assertStringContainsString('does not exists', $tester->getDisplay());
+        static::assertStringContainsString('does not exist', $tester->getDisplay());
     }
 
     public function testCommandExecuteDefaultOptions(): void
@@ -1211,7 +1211,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         ]);
 
         static::assertSame(2, $exitCode);
-        static::assertStringContainsString('does not exists', $tester->getDisplay());
+        static::assertStringContainsString('does not exist', $tester->getDisplay());
     }
 
     public function testCommandExecuteWithValidAutoloadFile(): void
@@ -1374,7 +1374,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
              * @param int $value
              * @return void
              */
-            public function test(int $value = null): void {}
+            public function test(?int $value = null): void {}
         }';
 
         // Should not throw; may or may not produce an error depending on PHP version
