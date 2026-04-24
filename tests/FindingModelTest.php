@@ -112,6 +112,28 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testDiagnosticToFindingMapAllAvoidsDuplicateDeprecatedMethodFinding(): void
+    {
+        $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
+        $diagnostic = new Diagnostic(
+            DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+            'test_file.php',
+            10,
+            ['display_name' => 'voku\tests\OldClass->oldMethod()']
+        );
+
+        $findings = DiagnosticToFindingMapper::mapAll(
+            ['test_file.php' => [$message]],
+            new DiagnosticCollection([$diagnostic])
+        );
+
+        static::assertCount(1, $findings);
+        static::assertSame(
+            Finding::fromMessage('test_file.php', $message)->toArray(),
+            $findings[0]->toArray()
+        );
+    }
+
     public function testQualityProfileOutputCompatibilityWithDiagnostics(): void
     {
         $errors = [
@@ -133,6 +155,34 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
             QualityProfile::fromErrors($errors),
             QualityProfileBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray()
         );
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithDeprecatedMethodDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass->oldMethod()']
+            ),
+        ]);
+        $baseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+
+        $profile = QualityProfileBuilder::fromErrorsAndDiagnostics(
+            $errors,
+            $diagnostics,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame([], $profile['new_findings']);
     }
 
     public function testBaselineBuilderProducesCompactSchema(): void

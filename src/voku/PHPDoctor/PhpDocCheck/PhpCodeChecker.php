@@ -166,15 +166,18 @@ final class PhpCodeChecker
             $errors = $functionCheckResult['errors'];
             $diagnostics = $functionCheckResult['diagnostics'];
 
-            $errors = CheckClasses::checkClasses(
+            $classCheckResult = CheckClasses::checkClassesWithDiagnostics(
                 $phpInfo,
                 $access,
                 $skipDeprecatedFunctions,
                 $skipFunctionsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
                 $skipParseErrorsAsError,
-                $errors
+                $errors,
+                $diagnostics
             );
+            $errors = $classCheckResult['errors'];
+            $diagnostics = $classCheckResult['diagnostics'];
         }
 
         // Keep the legacy string errors for unchanged text output and external callers
