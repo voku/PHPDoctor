@@ -252,9 +252,7 @@ final class PhpDoctorCommand extends Command
             $writeError = null;
             \set_error_handler(
                 static function (int $severity, string $message) use (&$writeError): bool {
-                    if ($severity !== 0) {
-                        $writeError = $message;
-                    }
+                    $writeError = '[' . $severity . '] ' . $message;
 
                     return true;
                 }

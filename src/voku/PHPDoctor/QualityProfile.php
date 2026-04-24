@@ -153,7 +153,7 @@ final class QualityProfile
         ];
 
         foreach ($findings as $finding) {
-            $summary[$finding['category']] = ($summary[$finding['category']] ?? 0) + 1;
+            $summary[$finding['category']]++;
         }
 
         return $summary;
