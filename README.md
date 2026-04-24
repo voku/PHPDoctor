@@ -11,7 +11,8 @@ PHPDoctor: type and PHPDoc quality profiling for PHP projects.
 If you already use [PHPStan](https://phpstan.org/r/db8ec6af-8815-444e-b533-2717ccb643c6) for your type checks but sometimes someone 
 in the team still commit non typed code, then PHPDoctor is for you.
 
-PHPDoctor keeps its original PHPDoc doctor identity as the first diagnostic stage and grows from there: it checks missing native types, missing or wrong PHPDoc types, deprecated documentation gaps, parse errors, and other type-documentation regressions without trying to replace PHPStan, Psalm, or a generic architecture review.
+PHPDoctor keeps its original PHPDoc doctor identity as the first diagnostic stage and grows from there.
+It checks missing native types, missing or wrong PHPDoc types, deprecated documentation gaps, parse errors, and other type-documentation regressions without trying to replace PHPStan, Psalm, or a generic architecture review.
 
 ### Install via "phar" (**recommended**)
 

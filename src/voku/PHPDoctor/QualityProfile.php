@@ -102,7 +102,7 @@ final class QualityProfile
             'line'        => $line,
             'category'    => self::categorizeMessage($message),
             'message'     => $message,
-            'fingerprint' => \sha1($file . '|' . $message),
+            'fingerprint' => \hash('sha256', $file . '|' . $message),
         ];
     }
 

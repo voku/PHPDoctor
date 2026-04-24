@@ -196,8 +196,7 @@ final class PhpDoctorCommand extends Command
         }
 
         $baselineFile = $input->getOption('baseline-file');
-        \assert(\is_string($baselineFile) || $baselineFile === null);
-        $baselineFile = $baselineFile ?? '';
+        \assert(\is_string($baselineFile));
 
         $generateBaseline = $input->getOption('generate-baseline') !== 'false';
 
@@ -251,9 +250,23 @@ final class PhpDoctorCommand extends Command
             }
 
             $baselineJson = self::jsonEncode($qualityProfile);
-            if (\file_put_contents($baselineFile, $baselineJson . "\n") === false) {
+            $writeError = null;
+            \set_error_handler(
+                static function (int $severity, string $message) use (&$writeError): bool {
+                    $writeError = $message;
+
+                    return true;
+                }
+            );
+            $writeResult = \file_put_contents($baselineFile, $baselineJson . "\n");
+            \restore_error_handler();
+
+            if ($writeResult === false) {
                 $output->writeln('-------------------------------');
                 $output->writeln('The baseline-file "' . $baselineFile . '" could not be written.');
+                if ($writeError !== null) {
+                    $output->writeln('Reason: ' . $writeError);
+                }
                 $output->writeln('-------------------------------');
 
                 return 2;
