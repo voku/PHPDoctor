@@ -71,6 +71,14 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame($fingerprint->toString(), $finding->fingerprint()->toString());
     }
 
+    public function testFindingCategoryRejectsUnknownValue(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Unsupported finding category "not_a_real_category".');
+
+        FindingCategory::fromValue('not_a_real_category');
+    }
+
     public function testQualityProfileOutputCompatibility(): void
     {
         $errors = [

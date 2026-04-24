@@ -135,9 +135,6 @@ final class CheckFunctions
         ];
     }
 
-    /**
-     * @return DiagnosticCollection
-     */
     private static function checkDeprecatedAttributeOnFunction(
         \voku\SimplePhpParser\Model\PHPFunction $function,
         DiagnosticCollection $diagnostics
