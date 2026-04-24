@@ -6,10 +6,12 @@
 
 # 🏥 ***PHPDoc***tor
 
-Check PHP files or directories for missing types.
+PHPDoctor: type and PHPDoc quality profiling for PHP projects.
 
 If you already use [PHPStan](https://phpstan.org/r/db8ec6af-8815-444e-b533-2717ccb643c6) for your type checks but sometimes someone 
 in the team still commit non typed code, then PHPDoctor is for you.
+
+PHPDoctor keeps its original PHPDoc doctor identity as the first diagnostic stage and grows from there: it checks missing native types, missing or wrong PHPDoc types, deprecated documentation gaps, parse errors, and other type-documentation regressions without trying to replace PHPStan, Psalm, or a generic architecture review.
 
 ### Install via "phar" (**recommended**)
 
@@ -43,6 +45,47 @@ Options:
       --skip-functions-with-leading-underscore[=SKIP-FUNCTIONS-WITH-LEADING-UNDERSCORE]  Skip check for functions / methods with leading underscore. (false or true) [default: "false"]
       --skip-parse-errors[=SKIP-PARSE-ERRORS]                                            Skip parse errors in the output. (false or true) [default: "true"]
       --path-exclude-regex[=PATH-EXCLUDE-REGEX]                                          Skip some paths via regex e.g. "#/vendor/|/other/.*/path/#i" [default: "#/vendor/|/tests/#i"]
+      --file-extensions[=FILE-EXTENSIONS]                                                Check different file extensions e.g. ".php|.php4|.php5|.inc" [default: ".php"]
+      --profile[=PROFILE]                                                                Show a type and PHPDoc quality profile summary. (false or true) [default: "false"]
+      --output-format[=OUTPUT-FORMAT]                                                    Output format for the analysis result. (text or json) [default: "text"]
+      --baseline-file[=BASELINE-FILE]                                                    Compare against a PHPDoctor JSON baseline file so only new findings fail.
+      --generate-baseline[=GENERATE-BASELINE]                                            Write the current type and PHPDoc profile to --baseline-file. (false or true) [default: "false"]
+```
+
+### Staged profiling
+
+PHPDoctor is evolving in focused stages:
+
+1. keep the existing PHPDoc and native type diagnostics as the seed;
+2. add structured profiling around the current findings;
+3. support JSON baselines so CI can fail only on newly introduced findings;
+4. provide project-level summaries for actionable type documentation coverage;
+5. expose machine-readable JSON for CI dashboards.
+
+This stays intentionally narrow: PHPDoctor profiles type documentation quality and controlled regressions, not generic code quality scores.
+
+Show a profile summary:
+
+```bash
+php vendor/bin/phpdoctor analyse src --profile=true
+```
+
+Generate a baseline:
+
+```bash
+php vendor/bin/phpdoctor analyse src --baseline-file=phpdoctor-baseline.json --generate-baseline=true
+```
+
+Use the baseline in CI so only new findings fail:
+
+```bash
+php vendor/bin/phpdoctor analyse src --baseline-file=phpdoctor-baseline.json
+```
+
+Emit JSON for dashboards:
+
+```bash
+php vendor/bin/phpdoctor analyse src --output-format=json
 ```
 
 ### Demo

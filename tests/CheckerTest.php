@@ -8,6 +8,7 @@ use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use voku\PHPDoctor\CliCommand\PhpDoctorCommand;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
+use voku\PHPDoctor\QualityProfile;
 
 /**
  * @internal
@@ -1143,6 +1144,76 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
         static::assertSame(1, $exitCode);
         static::assertStringContainsString('errors detected', $tester->getDisplay());
+    }
+
+    public function testCommandJsonProfileOutput(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+            '--output-format' => 'json',
+        ]);
+
+        $profile = \json_decode($tester->getDisplay(), true);
+
+        static::assertSame(1, $exitCode);
+        static::assertIsArray($profile);
+        static::assertSame('type_and_phpdoc_quality', $profile['scope'] ?? null);
+        static::assertSame(2, $profile['total_error_count'] ?? null);
+        static::assertSame(2, $profile['new_error_count'] ?? null);
+        static::assertSame(2, $profile['summary']['missing_native_type'] ?? null);
+    }
+
+    public function testCommandBaselineAllowsExistingFindings(): void
+    {
+        $baselineFile = \sys_get_temp_dir() . '/phpdoctor-baseline-' . \uniqid('', true) . '.json';
+
+        try {
+            $tester = $this->buildCommandTester();
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy8.php'],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+                '--generate-baseline' => 'true',
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertFileExists($baselineFile);
+
+            $tester = $this->buildCommandTester();
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy8.php'],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 new errors detected', $tester->getDisplay());
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
+    }
+
+    public function testQualityProfileCategorizesExistingFindings(): void
+    {
+        $profile = QualityProfile::fromErrors(
+            [
+                '' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                    '[8]: wrong return type "string" in phpdoc from voku\tests\WrongDoc->foo()',
+                    '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+                ],
+            ]
+        );
+
+        static::assertSame(3, $profile['total_error_count']);
+        static::assertSame(1, $profile['summary']['missing_native_type']);
+        static::assertSame(1, $profile['summary']['wrong_phpdoc_type']);
+        static::assertSame(1, $profile['summary']['deprecated_documentation']);
     }
 
     public function testCommandExecuteWithInvalidPath(): void
