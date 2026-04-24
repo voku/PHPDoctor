@@ -13,7 +13,12 @@ in the team still commit non typed code, then PHPDoctor is for you.
 
 ### Install via "phar" (**recommended**)
 
-https://github.com/voku/PHPDoctor/releases
+```bash
+curl -L https://github.com/voku/PHPDoctor/releases/latest/download/phpdoctor.phar -o phpdoctor.phar
+chmod +x phpdoctor.phar
+```
+
+All releases: https://github.com/voku/PHPDoctor/releases
 
 ### Install via "composer require"
 
@@ -80,8 +85,15 @@ function foo_ignore($lall) {
 
 ### Building the PHAR file
 
-The PHAR is built automatically via GitHub Actions whenever a new version tag (`v*.*.*`) is pushed.
-The resulting `phpdoctor.phar` is attached to the corresponding [GitHub Release](https://github.com/voku/PHPDoctor/releases).
+The PHAR is built automatically via GitHub Actions whenever a new version tag (`*.*.*`) is pushed.
+The resulting `phpdoctor.phar` is attached to the corresponding GitHub Release and can be downloaded directly:
+
+```bash
+# download the latest release
+curl -L https://github.com/voku/PHPDoctor/releases/latest/download/phpdoctor.phar -o phpdoctor.phar
+chmod +x phpdoctor.phar
+php phpdoctor.phar analyse --help
+```
 
 To build locally, install [humbug/box](https://github.com/box-project/box) and run:
 
