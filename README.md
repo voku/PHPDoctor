@@ -95,6 +95,26 @@ Emit GitHub Actions workflow annotations:
 php vendor/bin/phpdoctor analyse src --output-format=github
 ```
 
+Use GitHub Actions annotations with a minimal workflow step:
+
+```yaml
+- name: Run PHPDoctor GitHub annotations
+  run: php vendor/bin/phpdoctor analyse src --output-format=github
+```
+
+Use baseline-aware GitHub Actions annotations so only new findings are annotated:
+
+```yaml
+- name: Run PHPDoctor GitHub annotations with baseline
+  run: php vendor/bin/phpdoctor analyse src --baseline-file=phpdoctor-baseline.json --output-format=github
+```
+
+Exit codes:
+
+- `0`: no findings, or no new findings when `--baseline-file` is active
+- `1`: findings found, or new findings found when `--baseline-file` is active
+- `2`: CLI, configuration, or baseline errors
+
 ### Demo
 
 Parse a string:
