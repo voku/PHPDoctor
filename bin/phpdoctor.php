@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace voku\PHPDoctor;
 
 use Symfony\Component\Console\Application;
+use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
 
 (static function () {
     error_reporting(E_ALL);
@@ -26,8 +27,7 @@ use Symfony\Component\Console\Application;
     if (is_file($autoloaderInWorkingDirectory)) {
         $autoloaderProjectPaths[] = \dirname($autoloaderInWorkingDirectory, 2);
 
-        /** @noinspection PhpIncludeInspection */
-        require_once $autoloaderInWorkingDirectory;
+        ComposerAutoloaderLoader::requireOnceIfNeeded($autoloaderInWorkingDirectory);
     }
 
     $autoloadProjectAutoloaderFile = static function (string $file) use (&$autoloaderProjectPaths): void {
@@ -36,8 +36,7 @@ use Symfony\Component\Console\Application;
             if (is_file($path)) {
                 $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                /** @noinspection PhpIncludeInspection */
-                require_once $path;
+                ComposerAutoloaderLoader::requireOnceIfNeeded($path);
             }
         } else {
             $pharPath = \Phar::running(false);
@@ -45,16 +44,14 @@ use Symfony\Component\Console\Application;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    /** @noinspection PhpIncludeInspection */
-                    require_once $path;
+                    ComposerAutoloaderLoader::requireOnceIfNeeded($path);
                 }
             } else {
                 $path = \dirname($pharPath) . $file;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    /** @noinspection PhpIncludeInspection */
-                    require_once $path;
+                    ComposerAutoloaderLoader::requireOnceIfNeeded($path);
                 }
             }
         }
