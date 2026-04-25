@@ -7,6 +7,7 @@ namespace voku\tests;
 use Symfony\Component\Console\Application;
 use Symfony\Component\Console\Tester\CommandTester;
 use voku\PHPDoctor\CliCommand\PhpDoctorCommand;
+use voku\PHPDoctor\Finding\Finding;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 use voku\PHPDoctor\QualityProfile;
 
@@ -731,6 +732,184 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsMissingFunctionPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string
+         */
+        function missingPhpDocParameterType(?string $value): string
+        {
+            return (string) $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\missingPhpDocParameterType()',
+                'function_or_method_name' => 'voku\tests\missingPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'function_parameter_phpdoc',
+                'missing_type' => 'null',
+                'parameter_position' => 0,
+                'symbol' => 'voku\tests\missingPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[8]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameterType() | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsMissingMethodPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @param string $value
+             * @return string
+             */
+            public function missingPhpDocParameterType(?string $value): string
+            {
+                return (string) $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingPhpDocParameterType()',
+                'function_or_method_name' => 'missingPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter_phpdoc',
+                'missing_type' => 'null',
+                'parameter_position' => 0,
+                'symbol' => 'voku\tests\SimpleClass->missingPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: missing parameter type "null" in phpdoc from voku\tests\SimpleClass->missingPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[10]: missing parameter type "null" in phpdoc from voku\tests\SimpleClass->missingPhpDocParameterType() | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsMultipleMissingPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $first
+         * @param int $second
+         * @return string
+         */
+        function missingPhpDocParameters(?string $first, int|float $second): string
+        {
+            return (string) $first . $second;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(2, $diagnostics);
+        static::assertSame(
+            [
+                [
+                    'id' => 'missing_phpdoc_parameter_type',
+                    'evidence' => [
+                        'display_name' => 'voku\tests\missingPhpDocParameters()',
+                        'function_or_method_name' => 'voku\tests\missingPhpDocParameters',
+                        'parameter_name' => 'first',
+                        'kind' => 'function_parameter_phpdoc',
+                        'missing_type' => 'null',
+                        'parameter_position' => 0,
+                        'symbol' => 'voku\tests\missingPhpDocParameters() | parameter:first',
+                    ],
+                ],
+                [
+                    'id' => 'missing_phpdoc_parameter_type',
+                    'evidence' => [
+                        'display_name' => 'voku\tests\missingPhpDocParameters()',
+                        'function_or_method_name' => 'voku\tests\missingPhpDocParameters',
+                        'parameter_name' => 'second',
+                        'kind' => 'function_parameter_phpdoc',
+                        'missing_type' => 'float',
+                        'parameter_position' => 1,
+                        'symbol' => 'voku\tests\missingPhpDocParameters() | parameter:second',
+                    ],
+                ],
+            ],
+            \array_map(
+                static fn (\voku\PHPDoctor\Diagnostic\Diagnostic $diagnostic): array => [
+                    'id' => $diagnostic->id(),
+                    'evidence' => $diagnostic->evidence(),
+                ],
+                $diagnostics
+            )
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[9]: missing parameter type "float" in phpdoc from voku\tests\missingPhpDocParameters() | parameter:second',
+                    '[9]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameters() | parameter:first',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
     public function testCheckFromStringStillReturnsLegacyArray(): void
     {
         $code = '<?php
@@ -785,6 +964,30 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[4]: missing parameter type for voku\tests\missingParameterType() | parameter:value',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForMissingPhpDocParameterType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string
+         */
+        function missingPhpDocParameterType(?string $value): string
+        {
+            return (string) $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameterType() | parameter:value',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)

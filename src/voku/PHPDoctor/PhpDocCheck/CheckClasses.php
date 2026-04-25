@@ -979,6 +979,8 @@ final class CheckClasses
 
             if ($typeFound) {
                 if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                    $declaringClassName = $class->name ?? '?';
+                    $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
                     $paramTypesNormalized = $paramTypes + [
                         'type' => null,
                         'typeFromPhpDoc' => null,
@@ -991,11 +993,27 @@ final class CheckClasses
                     $error = CheckPhpDocType::checkPhpDocType(
                         $paramTypesNormalized,
                         $methodInfo,
-                        ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
+                        $displayName,
                         $error,
                         ($class->name ?? null),
                         $paramName
                     );
+
+                    /** @var array<string, array<int, string>> $error */
+                    $parameterCheckResult = CheckPhpDocType::migrateMissingParameterErrorsToDiagnostics(
+                        $error,
+                        $diagnostics,
+                        $methodInfo['file'] ?? '',
+                        $methodInfo['line'] ?? null,
+                        $displayName,
+                        $methodName,
+                        $paramName,
+                        'method_parameter_phpdoc',
+                        $parameterPosition,
+                        $declaringClassName
+                    );
+                    $error = $parameterCheckResult['errors'];
+                    $diagnostics = $parameterCheckResult['diagnostics'];
                 }
             } else {
                 $declaringClassName = $class->name ?? '?';

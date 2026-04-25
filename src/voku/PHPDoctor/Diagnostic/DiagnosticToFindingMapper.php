@@ -44,6 +44,7 @@ final class DiagnosticToFindingMapper
             DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
             DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
             DiagnosticId::MISSING_NATIVE_RETURN_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
+            DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_PHPDOC_TYPE),
             DiagnosticId::PARSER_SYNTAX_ERROR => FindingCategory::fromValue(FindingCategory::PARSE_ERROR),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
