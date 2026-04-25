@@ -1,0 +1,7 @@
+{
+    "schema_version": 1,
+    "tool": "phpdoctor",
+    "scope": "type_and_phpdoc_quality",
+    "generated_at": "2026-04-25T02:05:31+00:00",
+    "findings": []
+}
