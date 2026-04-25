@@ -33,7 +33,12 @@ final class ComposerAutoloaderLoaderTest extends \PHPUnit\Framework\TestCase
 
         try {
             unset($GLOBALS['phpdoctor_autoload_loader_included']);
-            eval('class ' . $autoloadClass . ' {}');
+            $preloadedClassFile = $directory . '/preloaded-autoloader-class.php';
+            static::assertNotFalse(\file_put_contents(
+                $preloadedClassFile,
+                "<?php\n\nclass $autoloadClass\n{\n}\n"
+            ));
+            require_once $preloadedClassFile;
 
             static::assertFalse(ComposerAutoloaderLoader::requireOnceIfNeeded($autoloadFile));
             static::assertSame(0, $GLOBALS['phpdoctor_autoload_loader_included'] ?? 0);
@@ -70,6 +75,7 @@ final class ComposerAutoloaderLoaderTest extends \PHPUnit\Framework\TestCase
         foreach ([
             '/vendor/composer/autoload_real.php',
             '/vendor/autoload.php',
+            '/preloaded-autoloader-class.php',
         ] as $file) {
             if (\is_file($directory . $file)) {
                 \unlink($directory . $file);

@@ -31,7 +31,7 @@ final class ComposerAutoloaderLoader
             return null;
         }
 
-        \preg_match('/class\s+(ComposerAutoloaderInit[a-f0-9]+)\b/', $autoloadRealContents, $matches);
+        \preg_match('/class\s+(ComposerAutoloaderInit[a-fA-F0-9]+)\b/', $autoloadRealContents, $matches);
 
         return $matches[1] ?? null;
     }
