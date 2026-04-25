@@ -22,6 +22,16 @@ This separation is intentional. A migrated check must emit `Diagnostic` objects,
 
 Use this only for text output and legacy wrappers that still expose array-based errors.
 
+### Diagnostic compatibility mappings
+
+Some typed diagnostic IDs are intentionally more precise than the public compatibility surface:
+
+- typed IDs may describe a narrower internal condition than the exposed `FindingCategory`
+- `AMBIGUOUS_PHPDOC_PARAMETER_TYPE` and `AMBIGUOUS_PHPDOC_RETURN_TYPE` intentionally map to `missing_native_type`
+- their legacy message projection also stays on the old "missing native type" wording to preserve existing fingerprints and downstream behavior
+
+This is compatibility, not drift. Changing a projected category or legacy message is a public output change and must be treated as an explicit baseline/schema migration, not as an internal refactor.
+
 ## Findings mapping
 
 `findings()` maps each source explicitly:
