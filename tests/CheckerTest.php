@@ -3077,12 +3077,9 @@ PHP
 
     public function testCommandExecuteLoadsBootstrapAutoloadFileBeforeParser(): void
     {
-        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-autoload-');
-        static::assertIsString($directoryMarker);
-        \unlink($directoryMarker);
-        $directory = $directoryMarker;
-        \mkdir($directory);
-        \mkdir($directory . '/vendor');
+        $directory = \sys_get_temp_dir() . '/phpdoctor-autoload-' . \bin2hex(\random_bytes(8));
+        static::assertTrue(\mkdir($directory));
+        static::assertTrue(\mkdir($directory . '/vendor'));
         $bootstrapHelper = $directory . '/bootstrap-helper.php';
         $vendorAutoload = $directory . '/vendor/autoload.php';
         $bootstrapFile = $directory . '/phpstan-bootstrap.php';
