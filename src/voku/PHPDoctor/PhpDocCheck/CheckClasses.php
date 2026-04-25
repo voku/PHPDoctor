@@ -91,7 +91,7 @@ final class CheckClasses
                 $error
             );
 
-            $error = self::checkProperties(
+            $propertyCheckResult = self::checkProperties(
                 $class,
                 $access,
                 $skipMethodsWithLeadingUnderscore,
@@ -99,6 +99,8 @@ final class CheckClasses
                 $error,
                 $diagnostics
             );
+            $error = $propertyCheckResult['errors'];
+            $diagnostics = $propertyCheckResult['diagnostics'];
 
             $error = self::checkMethods(
                 $class,
@@ -969,7 +971,10 @@ final class CheckClasses
      * @param string[][]                               $error
      * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: \voku\PHPDoctor\Diagnostic\DiagnosticCollection
+     * }
      */
     private static function checkProperties(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
@@ -977,12 +982,17 @@ final class CheckClasses
         bool                                     $skipMethodsWithLeadingUnderscore,
         bool                                     $skipAmbiguousTypesAsError,
         array                                    $error,
-        DiagnosticCollection                     &$diagnostics
+        DiagnosticCollection                     $diagnostics
     ): array
     {
+        /** @var array<string, array<int, string>> $error */
+
         // INFO: ignore "missing type for Exception"
         if (is_a(($class->name ?? ''), \Exception::class, true)) {
-          return $error;
+            return [
+                'errors' => $error,
+                'diagnostics' => $diagnostics,
+            ];
         }
 
         foreach ($class->getPropertiesInfo(
@@ -1065,6 +1075,11 @@ final class CheckClasses
             }
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 }
