@@ -181,6 +181,33 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAmbiguousPhpDocParameterTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType()',
+                'function_or_method_name' => 'ambiguousPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter_phpdoc_ambiguous',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'array',
+                'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: missing parameter type for voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testMissingNativeReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
     {
         $diagnostic = new Diagnostic(
@@ -716,6 +743,38 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame($legacyBaseline['tool'], $typedBaseline['tool']);
         static::assertSame($legacyBaseline['scope'], $typedBaseline['scope']);
         static::assertSame($legacyBaseline['findings'], $typedBaseline['findings']);
+    }
+
+    public function testQualityProfileAndBaselineStayCompatibleForAmbiguousPhpDocParameterDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE,
+                    'test_file.php',
+                    8,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType()',
+                        'function_or_method_name' => 'ambiguousPhpDocParameterType',
+                        'parameter_name' => 'value',
+                        'kind' => 'method_parameter_phpdoc_ambiguous',
+                        'parameter_position' => 0,
+                        'phpdoc_type' => 'array',
+                        'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+                    ]
+                ),
+            ])
+        );
+
+        static::assertSame(
+            QualityProfile::fromErrors($analysisResult->toLegacyErrors()),
+            QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+        static::assertSame(
+            BaselineBuilder::fromErrors($analysisResult->toLegacyErrors())->toArray(),
+            BaselineBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
     }
 
     public function testBaselineBuilderFromAnalysisResultMatchesLegacyProjection(): void
