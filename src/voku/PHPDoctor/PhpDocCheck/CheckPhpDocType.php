@@ -348,6 +348,111 @@ final class CheckPhpDocType
     /**
      * @param array<string, array<int, string>> $errors
      *
+     * @return array<int, string>|null
+     */
+    private static function legacyMessagesForFile(array $errors, string $file): ?array
+    {
+        /** @var array<int, string>|null $messages */
+        $messages = $errors[$file] ?? null;
+
+        return \is_array($messages) ? $messages : null;
+    }
+
+    /**
+     * @return array<int, string>|null
+     */
+    private static function matchLegacyMessage(string $pattern, string $message): ?array
+    {
+        $matches = [];
+        if (\preg_match($pattern, $message, $matches) !== 1) {
+            return null;
+        }
+
+        /** @var array<int, string> $matches */
+        return $matches;
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     * @param array<int, string>                $remainingMessages
+     *
+     * @return array<string, array<int, string>>
+     */
+    private static function withRemainingLegacyMessages(array $errors, string $file, array $remainingMessages): array
+    {
+        if ($remainingMessages === []) {
+            unset($errors[$file]);
+        } else {
+            $errors[$file] = $remainingMessages;
+        }
+
+        return $errors;
+    }
+
+    private static function appendDiagnostic(
+        DiagnosticCollection $diagnostics,
+        Diagnostic $diagnostic
+    ): DiagnosticCollection {
+        return $diagnostics->with($diagnostic);
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
+    private static function migrationResult(array $errors, DiagnosticCollection $diagnostics): array
+    {
+        return [
+            'errors' => $errors,
+            'diagnostics' => $diagnostics,
+        ];
+    }
+
+    /**
+     * @param array<string, array<int, string>>        $errors
+     * @param callable(array<int, string>): Diagnostic $diagnosticFactory
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
+    private static function migrateLegacyErrorsToDiagnostics(
+        array $errors,
+        DiagnosticCollection $diagnostics,
+        string $file,
+        string $pattern,
+        callable $diagnosticFactory
+    ): array {
+        $messages = self::legacyMessagesForFile($errors, $file);
+        if ($messages === null) {
+            return self::migrationResult($errors, $diagnostics);
+        }
+
+        $remainingMessages = [];
+        foreach ($messages as $message) {
+            $matches = self::matchLegacyMessage($pattern, $message);
+            if ($matches === null) {
+                $remainingMessages[] = $message;
+
+                continue;
+            }
+
+            $diagnostics = self::appendDiagnostic($diagnostics, $diagnosticFactory($matches));
+        }
+
+        $errors = self::withRemainingLegacyMessages($errors, $file, $remainingMessages);
+
+        return self::migrationResult($errors, $diagnostics);
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     *
      * @return array{
      *     errors: array<string, array<int, string>>,
      *     diagnostics: DiagnosticCollection
@@ -365,64 +470,50 @@ final class CheckPhpDocType
         int $parameterPosition,
         ?string $declaringClass = null
     ): array {
-        /** @var array<int, string>|null $messages */
-        $messages = $errors[$file] ?? null;
-        if (!\is_array($messages)) {
-            return [
-                'errors' => $errors,
-                'diagnostics' => $diagnostics,
-            ];
-        }
-
         $pattern = '/^\[(\d+|\?)\]: missing parameter type "(.+)" in phpdoc from '
             . \preg_quote($displayName, '/')
             . ' \| parameter:'
             . \preg_quote($parameterName, '/')
             . '$/';
 
-        $remainingMessages = [];
-        foreach ($messages as $message) {
-            if (\preg_match($pattern, $message, $matches) !== 1) {
-                $remainingMessages[] = $message;
+        return self::migrateLegacyErrorsToDiagnostics(
+            $errors,
+            $diagnostics,
+            $file,
+            $pattern,
+            static function (array $matches) use (
+                $declaringClass,
+                $displayName,
+                $functionOrMethodName,
+                $parameterName,
+                $kind,
+                $parameterPosition,
+                $file,
+                $line
+            ): Diagnostic {
+                $diagnosticEvidence = [];
+                if ($declaringClass !== null) {
+                    $diagnosticEvidence['declaring_class'] = $declaringClass;
+                }
 
-                continue;
-            }
+                $diagnosticEvidence += [
+                    'display_name' => $displayName,
+                    'function_or_method_name' => $functionOrMethodName,
+                    'parameter_name' => $parameterName,
+                    'kind' => $kind,
+                    'missing_type' => $matches[2],
+                    'parameter_position' => $parameterPosition,
+                    'symbol' => $displayName . ' | parameter:' . $parameterName,
+                ];
 
-            $diagnosticEvidence = [];
-            if ($declaringClass !== null) {
-                $diagnosticEvidence['declaring_class'] = $declaringClass;
-            }
-
-            $diagnosticEvidence += [
-                'display_name' => $displayName,
-                'function_or_method_name' => $functionOrMethodName,
-                'parameter_name' => $parameterName,
-                'kind' => $kind,
-                'missing_type' => $matches[2],
-                'parameter_position' => $parameterPosition,
-                'symbol' => $displayName . ' | parameter:' . $parameterName,
-            ];
-
-            $diagnostics = $diagnostics->with(
-                new Diagnostic(
+                return new Diagnostic(
                     DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE,
                     $file,
                     $matches[1] !== '?' ? (int) $matches[1] : $line,
                     $diagnosticEvidence
-                )
-            );
-        }
-
-        if ($remainingMessages === []) {
-            unset($errors[$file]);
-        } else {
-            $errors[$file] = $remainingMessages;
-        }
-
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+                );
+            }
+        );
     }
 
     /**
@@ -446,67 +537,54 @@ final class CheckPhpDocType
         ?string $declaringClass = null,
         ?string $nativeType = null
     ): array {
-        /** @var array<int, string>|null $messages */
-        $messages = $errors[$file] ?? null;
-        if (!\is_array($messages)) {
-            return [
-                'errors' => $errors,
-                'diagnostics' => $diagnostics,
-            ];
-        }
-
         $pattern = '/^\[(\d+|\?)\]: wrong parameter type "([^"]+)" in phpdoc from '
             . \preg_quote($displayName, '/')
             . '  \| parameter:'
             . \preg_quote($parameterName, '/')
             . '$/';
 
-        $remainingMessages = [];
-        foreach ($messages as $message) {
-            if (\preg_match($pattern, $message, $matches) !== 1) {
-                $remainingMessages[] = $message;
+        return self::migrateLegacyErrorsToDiagnostics(
+            $errors,
+            $diagnostics,
+            $file,
+            $pattern,
+            static function (array $matches) use (
+                $declaringClass,
+                $nativeType,
+                $displayName,
+                $functionOrMethodName,
+                $parameterName,
+                $kind,
+                $parameterPosition,
+                $file,
+                $line
+            ): Diagnostic {
+                $diagnosticEvidence = [];
+                if ($declaringClass !== null) {
+                    $diagnosticEvidence['declaring_class'] = $declaringClass;
+                }
+                if ($nativeType !== null && $nativeType !== '') {
+                    $diagnosticEvidence['native_type'] = $nativeType;
+                }
 
-                continue;
-            }
+                $diagnosticEvidence += [
+                    'display_name' => $displayName,
+                    'function_or_method_name' => $functionOrMethodName,
+                    'parameter_name' => $parameterName,
+                    'kind' => $kind,
+                    'parameter_position' => $parameterPosition,
+                    'phpdoc_type' => $matches[2],
+                    'symbol' => $displayName . ' | parameter:' . $parameterName,
+                ];
 
-            $diagnosticEvidence = [];
-            if ($declaringClass !== null) {
-                $diagnosticEvidence['declaring_class'] = $declaringClass;
-            }
-            if ($nativeType !== null && $nativeType !== '') {
-                $diagnosticEvidence['native_type'] = $nativeType;
-            }
-
-            $diagnosticEvidence += [
-                'display_name' => $displayName,
-                'function_or_method_name' => $functionOrMethodName,
-                'parameter_name' => $parameterName,
-                'kind' => $kind,
-                'parameter_position' => $parameterPosition,
-                'phpdoc_type' => $matches[2],
-                'symbol' => $displayName . ' | parameter:' . $parameterName,
-            ];
-
-            $diagnostics = $diagnostics->with(
-                new Diagnostic(
+                return new Diagnostic(
                     DiagnosticId::WRONG_PHPDOC_PARAMETER_TYPE,
                     $file,
                     $matches[1] !== '?' ? (int) $matches[1] : $line,
                     $diagnosticEvidence
-                )
-            );
-        }
-
-        if ($remainingMessages === []) {
-            unset($errors[$file]);
-        } else {
-            $errors[$file] = $remainingMessages;
-        }
-
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+                );
+            }
+        );
     }
 
     /**
@@ -527,60 +605,44 @@ final class CheckPhpDocType
         string $kind,
         ?string $declaringClass = null
     ): array {
-        /** @var array<int, string>|null $messages */
-        $messages = $errors[$file] ?? null;
-        if (!\is_array($messages)) {
-            return [
-                'errors' => $errors,
-                'diagnostics' => $diagnostics,
-            ];
-        }
-
         $pattern = '/^\[(\d+|\?)\]: missing return type "(.+)" in phpdoc from '
             . \preg_quote($displayName, '/')
             . '$/';
 
-        $remainingMessages = [];
-        foreach ($messages as $message) {
-            if (\preg_match($pattern, $message, $matches) !== 1) {
-                $remainingMessages[] = $message;
+        return self::migrateLegacyErrorsToDiagnostics(
+            $errors,
+            $diagnostics,
+            $file,
+            $pattern,
+            static function (array $matches) use (
+                $declaringClass,
+                $displayName,
+                $functionOrMethodName,
+                $kind,
+                $file,
+                $line
+            ): Diagnostic {
+                $diagnosticEvidence = [];
+                if ($declaringClass !== null) {
+                    $diagnosticEvidence['declaring_class'] = $declaringClass;
+                }
 
-                continue;
-            }
+                $diagnosticEvidence += [
+                    'display_name' => $displayName,
+                    'function_or_method_name' => $functionOrMethodName,
+                    'kind' => $kind,
+                    'missing_type' => $matches[2],
+                    'symbol' => $displayName,
+                ];
 
-            $diagnosticEvidence = [];
-            if ($declaringClass !== null) {
-                $diagnosticEvidence['declaring_class'] = $declaringClass;
-            }
-
-            $diagnosticEvidence += [
-                'display_name' => $displayName,
-                'function_or_method_name' => $functionOrMethodName,
-                'kind' => $kind,
-                'missing_type' => $matches[2],
-                'symbol' => $displayName,
-            ];
-
-            $diagnostics = $diagnostics->with(
-                new Diagnostic(
+                return new Diagnostic(
                     DiagnosticId::MISSING_PHPDOC_RETURN_TYPE,
                     $file,
                     $matches[1] !== '?' ? (int) $matches[1] : $line,
                     $diagnosticEvidence
-                )
-            );
-        }
-
-        if ($remainingMessages === []) {
-            unset($errors[$file]);
-        } else {
-            $errors[$file] = $remainingMessages;
-        }
-
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+                );
+            }
+        );
     }
 
     /**
@@ -602,62 +664,47 @@ final class CheckPhpDocType
         ?string $declaringClass = null,
         ?string $nativeType = null
     ): array {
-        /** @var array<int, string>|null $messages */
-        $messages = $errors[$file] ?? null;
-        if (!\is_array($messages)) {
-            return [
-                'errors' => $errors,
-                'diagnostics' => $diagnostics,
-            ];
-        }
-
         $pattern = '/^\[(\d+|\?)\]: wrong return type "([^"]+)" in phpdoc from '
             . \preg_quote($displayName, '/')
             . '$/';
 
-        $remainingMessages = [];
-        foreach ($messages as $message) {
-            if (\preg_match($pattern, $message, $matches) !== 1) {
-                $remainingMessages[] = $message;
+        return self::migrateLegacyErrorsToDiagnostics(
+            $errors,
+            $diagnostics,
+            $file,
+            $pattern,
+            static function (array $matches) use (
+                $declaringClass,
+                $nativeType,
+                $displayName,
+                $functionOrMethodName,
+                $kind,
+                $file,
+                $line
+            ): Diagnostic {
+                $diagnosticEvidence = [];
+                if ($declaringClass !== null) {
+                    $diagnosticEvidence['declaring_class'] = $declaringClass;
+                }
+                if ($nativeType !== null && $nativeType !== '') {
+                    $diagnosticEvidence['native_type'] = $nativeType;
+                }
 
-                continue;
-            }
+                $diagnosticEvidence += [
+                    'display_name' => $displayName,
+                    'function_or_method_name' => $functionOrMethodName,
+                    'kind' => $kind,
+                    'phpdoc_type' => $matches[2],
+                    'symbol' => $displayName,
+                ];
 
-            $diagnosticEvidence = [];
-            if ($declaringClass !== null) {
-                $diagnosticEvidence['declaring_class'] = $declaringClass;
-            }
-            if ($nativeType !== null && $nativeType !== '') {
-                $diagnosticEvidence['native_type'] = $nativeType;
-            }
-
-            $diagnosticEvidence += [
-                'display_name' => $displayName,
-                'function_or_method_name' => $functionOrMethodName,
-                'kind' => $kind,
-                'phpdoc_type' => $matches[2],
-                'symbol' => $displayName,
-            ];
-
-            $diagnostics = $diagnostics->with(
-                new Diagnostic(
+                return new Diagnostic(
                     DiagnosticId::WRONG_PHPDOC_RETURN_TYPE,
                     $file,
                     $matches[1] !== '?' ? (int) $matches[1] : $line,
                     $diagnosticEvidence
-                )
-            );
-        }
-
-        if ($remainingMessages === []) {
-            unset($errors[$file]);
-        } else {
-            $errors[$file] = $remainingMessages;
-        }
-
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+                );
+            }
+        );
     }
 }
