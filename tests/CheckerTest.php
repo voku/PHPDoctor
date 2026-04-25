@@ -2522,6 +2522,144 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(2, $profile['summary']['missing_native_type'] ?? null);
     }
 
+    public function testCommandGithubOutputEmitsAnnotations(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+            '--output-format' => 'github',
+        ]);
+
+        static::assertSame(1, $exitCode);
+        static::assertStringContainsString('::error file=', $tester->getDisplay());
+        static::assertStringContainsString('missing property type for voku\tests\Dummy8::$lall', $tester->getDisplay());
+        static::assertStringContainsString('(missing_native_type)', $tester->getDisplay());
+    }
+
+    public function testCommandGithubOutputUsesAllFindingsWithoutBaseline(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+            '--output-format' => 'github',
+        ]);
+
+        $lines = \array_values(\array_filter(\explode("\n", \trim($tester->getDisplay()))));
+
+        static::assertSame(1, $exitCode);
+        static::assertCount(2, $lines);
+    }
+
+    public function testCommandGithubOutputUsesOnlyNewFindingsWithBaseline(): void
+    {
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-github-baseline-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
+        \mkdir($directory);
+        $baselineFile = $directory . '/baseline.json';
+        $baselineSource = $directory . '/BaselineSource.php';
+        $newFindingSource = $directory . '/NewFindingSource.php';
+
+        \file_put_contents(
+            $baselineSource,
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace voku\tests;
+
+final class BaselineSource
+{
+    public $baselineMissingType;
+}
+PHP
+        );
+        \file_put_contents(
+            $newFindingSource,
+            <<<'PHP'
+<?php
+
+declare(strict_types=1);
+
+namespace voku\tests;
+
+final class NewFindingSource
+{
+    public $newMissingType;
+}
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+            $generateExitCode = $tester->execute([
+                'path' => [$baselineSource],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+                '--generate-baseline' => 'true',
+            ]);
+
+            static::assertSame(0, $generateExitCode);
+
+            $tester = $this->buildCommandTester();
+            $exitCode = $tester->execute([
+                'path' => [$directory],
+                '--path-exclude-regex' => '#/vendor/#i',
+                '--baseline-file' => $baselineFile,
+                '--output-format' => 'github',
+            ]);
+
+            $display = $tester->getDisplay();
+            $lines = \array_values(\array_filter(\explode("\n", \trim($display))));
+
+            static::assertSame(1, $exitCode);
+            static::assertCount(1, $lines);
+            static::assertStringContainsString('NewFindingSource.php', $display);
+            static::assertStringNotContainsString('BaselineSource.php', $display);
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+            if (\is_file($baselineSource)) {
+                \unlink($baselineSource);
+            }
+            if (\is_file($newFindingSource)) {
+                \unlink($newFindingSource);
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
+    public function testCommandGithubOutputPreservesExpectedExitCodes(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $errorExitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '#/vendor/#i',
+            '--output-format' => 'github',
+        ]);
+
+        static::assertSame(1, $errorExitCode);
+
+        $tester = $this->buildCommandTester();
+        $successExitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--output-format' => 'github',
+        ]);
+
+        static::assertSame(0, $successExitCode);
+        static::assertSame('', $tester->getDisplay());
+    }
+
     public function testCommandBaselineAllowsExistingFindings(): void
     {
         $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-baseline-');

@@ -48,7 +48,7 @@ Options:
       --path-exclude-regex[=PATH-EXCLUDE-REGEX]                                          Skip some paths via regex e.g. "#/vendor/|/other/.*/path/#i" [default: "#/vendor/|/tests/#i"]
       --file-extensions[=FILE-EXTENSIONS]                                                Check different file extensions e.g. ".php|.php4|.php5|.inc" [default: ".php"]
       --profile[=PROFILE]                                                                Show a type and PHPDoc quality profile summary. (false or true) [default: "false"]
-      --output-format[=OUTPUT-FORMAT]                                                    Output format for the analysis result. (text or json) [default: "text"]
+      --output-format[=OUTPUT-FORMAT]                                                    Output format for the analysis result. (text, json or github) [default: "text"]
       --baseline-file[=BASELINE-FILE]                                                    Compare against a PHPDoctor JSON baseline file so only new findings fail.
       --generate-baseline[=GENERATE-BASELINE]                                            Write the current type and PHPDoc profile to --baseline-file. (false or true) [default: "false"]
 ```
@@ -87,6 +87,12 @@ Emit JSON for dashboards:
 
 ```bash
 php vendor/bin/phpdoctor analyse src --output-format=json
+```
+
+Emit GitHub Actions workflow annotations:
+
+```bash
+php vendor/bin/phpdoctor analyse src --output-format=github
 ```
 
 ### Demo
