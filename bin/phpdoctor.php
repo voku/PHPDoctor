@@ -8,7 +8,6 @@ declare(strict_types=1);
 namespace voku\PHPDoctor;
 
 use Symfony\Component\Console\Application;
-use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
 
 (static function () {
     error_reporting(E_ALL);
@@ -22,12 +21,28 @@ use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
     $devOrPharLoader = require_once __DIR__ . '/../vendor/autoload.php';
     $devOrPharLoader->unregister();
 
+    $requireProjectAutoloaderIfNeeded = static function (string $autoloadFile): void {
+        $autoloadRealPath = \dirname($autoloadFile) . '/composer/autoload_real.php';
+        if (\is_file($autoloadRealPath)) {
+            $autoloadRealContents = \file_get_contents($autoloadRealPath);
+            if (\is_string($autoloadRealContents)) {
+                \preg_match('/class\s+(ComposerAutoloaderInit[a-f0-9]+)\b/i', $autoloadRealContents, $matches);
+                if (isset($matches[1]) && \class_exists($matches[1], false)) {
+                    return;
+                }
+            }
+        }
+
+        /** @noinspection PhpIncludeInspection */
+        require_once $autoloadFile;
+    };
+
     $autoloaderInWorkingDirectory = getcwd() . '/vendor/autoload.php';
     $autoloaderProjectPaths = [];
     if (is_file($autoloaderInWorkingDirectory)) {
         $autoloaderProjectPaths[] = \dirname($autoloaderInWorkingDirectory, 2);
 
-        ComposerAutoloaderLoader::requireOnceIfNeeded($autoloaderInWorkingDirectory);
+        $requireProjectAutoloaderIfNeeded($autoloaderInWorkingDirectory);
     }
 
     $autoloadProjectAutoloaderFile = static function (string $file) use (&$autoloaderProjectPaths): void {
@@ -36,7 +51,7 @@ use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
             if (is_file($path)) {
                 $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                ComposerAutoloaderLoader::requireOnceIfNeeded($path);
+                $requireProjectAutoloaderIfNeeded($path);
             }
         } else {
             $pharPath = \Phar::running(false);
@@ -44,14 +59,14 @@ use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    ComposerAutoloaderLoader::requireOnceIfNeeded($path);
+                    $requireProjectAutoloaderIfNeeded($path);
                 }
             } else {
                 $path = \dirname($pharPath) . $file;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    ComposerAutoloaderLoader::requireOnceIfNeeded($path);
+                    $requireProjectAutoloaderIfNeeded($path);
                 }
             }
         }

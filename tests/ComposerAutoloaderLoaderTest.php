@@ -33,7 +33,7 @@ final class ComposerAutoloaderLoaderTest extends \PHPUnit\Framework\TestCase
 
         try {
             unset($GLOBALS['phpdoctor_autoload_loader_included']);
-            \eval('class ' . $autoloadClass . ' {}');
+            eval('class ' . $autoloadClass . ' {}');
 
             static::assertFalse(ComposerAutoloaderLoader::requireOnceIfNeeded($autoloadFile));
             static::assertSame(0, $GLOBALS['phpdoctor_autoload_loader_included'] ?? 0);
