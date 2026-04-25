@@ -544,10 +544,7 @@ final class CheckClasses
      * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
      * @param string[][]                               $error
      *
-     * @return array{
-     *     errors: array<string, array<int, string>>,
-     *     diagnostics: DiagnosticCollection
-     * }
+     * @return string[][]
      *
      * @phpstan-param array{
      *     line: null|int,
@@ -907,7 +904,10 @@ final class CheckClasses
      * @param string                                   $methodName
      * @param string[][]                               $error
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
      *
      * @phpstan-param array{
      *     fullDescription: string,
