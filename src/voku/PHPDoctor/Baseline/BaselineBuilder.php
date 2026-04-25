@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace voku\PHPDoctor\Baseline;
 
 use voku\PHPDoctor\Analysis\AnalysisResult;
-use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
-use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
 
 final class BaselineBuilder
@@ -19,22 +17,9 @@ final class BaselineBuilder
         return self::fromFindings(self::findingsFromErrors($errors));
     }
 
-    /**
-     * @param array<string, list<string>> $errors
-     *
-     * Transitional compatibility path for callers that still pass legacy errors plus diagnostics.
-     */
-    public static function fromErrorsAndDiagnostics(array $errors, DiagnosticCollection $diagnostics): Baseline
-    {
-        return self::fromFindings(DiagnosticToFindingMapper::mapAll($errors, $diagnostics));
-    }
-
     public static function fromAnalysisResult(AnalysisResult $analysisResult): Baseline
     {
-        return self::fromErrorsAndDiagnostics(
-            $analysisResult->toLegacyErrors(),
-            $analysisResult->diagnostics()
-        );
+        return self::fromFindings($analysisResult->findings());
     }
 
     /**

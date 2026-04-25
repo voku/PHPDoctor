@@ -126,79 +126,6 @@ final class PhpCodeChecker
         array $pathExcludeRegex = [],
         array $fileExtensions = ['.php']
     ): AnalysisResult {
-        $analysisResult = self::checkPhpFilesWithDiagnostics(
-            $path,
-            $access,
-            $skipAmbiguousTypesAsError,
-            $skipDeprecatedFunctions,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipParseErrorsAsError,
-            $autoloaderProjectPaths,
-            $pathExcludeRegex,
-            $fileExtensions
-        );
-
-        return new AnalysisResult($analysisResult['diagnostics'], $analysisResult['errors']);
-    }
-
-    /**
-     * @param string   $code
-     * @param string[] $access
-     * @param bool     $skipAmbiguousTypesAsError
-     * @param bool     $skipDeprecatedMethods
-     * @param bool     $skipFunctionsWithLeadingUnderscore
-     * @param bool     $skipParseErrorsAsError
-     *
-     * @return array{
-     *     errors: array<string, list<string>>,
-     *     diagnostics: DiagnosticCollection
-     * }
-     */
-    public static function checkFromStringWithDiagnostics(
-        string $code,
-        array $access = ['public', 'protected', 'private'],
-        bool $skipAmbiguousTypesAsError = false,
-        bool $skipDeprecatedMethods = false,
-        bool $skipFunctionsWithLeadingUnderscore = false,
-        bool $skipParseErrorsAsError = true
-    ): array {
-        return self::checkPhpFilesWithDiagnostics(
-            $code,
-            $access,
-            $skipAmbiguousTypesAsError,
-            $skipDeprecatedMethods,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipParseErrorsAsError
-        );
-    }
-
-    /**
-     * @param string|string[] $path
-     * @param bool            $skipAmbiguousTypesAsError
-     * @param string[]        $access
-     * @param bool            $skipDeprecatedFunctions
-     * @param bool            $skipFunctionsWithLeadingUnderscore
-     * @param bool            $skipParseErrorsAsError
-     * @param string[]        $autoloaderProjectPaths
-     * @param string[]        $pathExcludeRegex
-     * @param string[]        $fileExtensions
-     *
-     * @return array{
-     *     errors: array<string, list<string>>,
-     *     diagnostics: DiagnosticCollection
-     * }
-     */
-    public static function checkPhpFilesWithDiagnostics(
-        $path,
-        array $access = ['public', 'protected', 'private'],
-        bool $skipAmbiguousTypesAsError = false,
-        bool $skipDeprecatedFunctions = false,
-        bool $skipFunctionsWithLeadingUnderscore = false,
-        bool $skipParseErrorsAsError = true,
-        array $autoloaderProjectPaths = [],
-        array $pathExcludeRegex = [],
-        array $fileExtensions = ['.php']
-    ): array {
         // init
         /** @var array<string, array<int, string>> $errors */
         $errors = [];
@@ -263,10 +190,10 @@ final class PhpCodeChecker
         }
         /** @var array<string, list<string>> $errors */
 
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+        return new AnalysisResult(
+            $diagnostics,
+            self::legacyOnlyErrors($errors, $diagnostics)
+        );
     }
 
     /**
@@ -293,5 +220,42 @@ final class PhpCodeChecker
         }
 
         return $diagnostics;
+    }
+
+    /**
+     * @param array<string, list<string>> $errors
+     *
+     * @return array<string, list<string>>
+     */
+    private static function legacyOnlyErrors(array $errors, DiagnosticCollection $diagnostics): array
+    {
+        $diagnosticMessages = [];
+        foreach ($diagnostics->all() as $diagnostic) {
+            $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
+            $diagnosticMessages[$diagnostic->file()][$message] = ($diagnosticMessages[$diagnostic->file()][$message] ?? 0) + 1;
+        }
+
+        foreach ($errors as $file => $messages) {
+            $legacyOnlyMessages = [];
+            foreach ($messages as $message) {
+                if (($diagnosticMessages[$file][$message] ?? 0) > 0) {
+                    --$diagnosticMessages[$file][$message];
+
+                    continue;
+                }
+
+                $legacyOnlyMessages[] = $message;
+            }
+
+            if ($legacyOnlyMessages === []) {
+                unset($errors[$file]);
+
+                continue;
+            }
+
+            $errors[$file] = $legacyOnlyMessages;
+        }
+
+        return $errors;
     }
 }
