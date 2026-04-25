@@ -292,15 +292,31 @@ final class CheckClasses
 
                 if ($typeFound) {
                     if ($methodInfo['returnTypes']['typeFromPhpDocSimple'] && $methodInfo['returnTypes']['type']) {
+                        $declaringClassName = $class->name ?? '?';
+                        $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
                         /** @noinspection ArgumentEqualsDefaultValueInspection */
                         $error = CheckPhpDocType::checkPhpDocType(
                             $methodInfo['returnTypes'],
                             $methodInfo,
-                            ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
+                            $displayName,
                             $error,
                             $class->name ?? null,
                             null
                         );
+
+                        /** @var array<string, array<int, string>> $error */
+                        $returnCheckResult = CheckPhpDocType::migrateMissingReturnErrorsToDiagnostics(
+                            $error,
+                            $diagnostics,
+                            $methodInfo['file'] ?? '',
+                            $methodInfo['line'] ?? null,
+                            $displayName,
+                            $methodName,
+                            'method_return_phpdoc',
+                            $declaringClassName
+                        );
+                        $error = $returnCheckResult['errors'];
+                        $diagnostics = $returnCheckResult['diagnostics'];
                     }
                 } else {
                     $declaringClassName = $class->name ?? '?';

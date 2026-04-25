@@ -844,6 +844,114 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsMissingFunctionPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string
+         */
+        function missingPhpDocReturnType(string $value): ?string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\missingPhpDocReturnType()',
+                'function_or_method_name' => 'voku\tests\missingPhpDocReturnType',
+                'kind' => 'function_return_phpdoc',
+                'missing_type' => 'null',
+                'symbol' => 'voku\tests\missingPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing return type "null" in phpdoc from voku\tests\missingPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[8]: missing return type "null" in phpdoc from voku\tests\missingPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsMissingMethodPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @param string $value
+             * @return string
+             */
+            public function missingPhpDocReturnType(string $value): ?string
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
+                'function_or_method_name' => 'missingPhpDocReturnType',
+                'kind' => 'method_return_phpdoc',
+                'missing_type' => 'null',
+                'symbol' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: missing return type "null" in phpdoc from voku\tests\SimpleClass->missingPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[10]: missing return type "null" in phpdoc from voku\tests\SimpleClass->missingPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
     public function testAnalyseStringReturnsMultipleMissingPhpDocParameterTypeDiagnostics(): void
     {
         $code = '<?php
@@ -988,6 +1096,30 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[8]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForMissingPhpDocReturnType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string
+         */
+        function missingPhpDocReturnType(string $value): ?string
+        {
+            return $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing return type "null" in phpdoc from voku\tests\missingPhpDocReturnType()',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)

@@ -129,19 +129,33 @@ final class CheckFunctions
                     $typeFound = true;
                 }
             }
-            if ($typeFound) {
-                if ($functionInfo['returnTypes']['typeFromPhpDocSimple'] && $functionInfo['returnTypes']['type']) {
-                    /** @noinspection ArgumentEqualsDefaultValueInspection */
-                    $error = CheckPhpDocType::checkPhpDocType(
-                        $functionInfo['returnTypes'],
-                        $functionInfo,
-                        $functionName . '()',
-                        $error,
-                        null,
-                        null
-                    );
-                }
-            } else {
+                if ($typeFound) {
+                    if ($functionInfo['returnTypes']['typeFromPhpDocSimple'] && $functionInfo['returnTypes']['type']) {
+                        $displayName = $functionName . '()';
+                        /** @noinspection ArgumentEqualsDefaultValueInspection */
+                        $error = CheckPhpDocType::checkPhpDocType(
+                            $functionInfo['returnTypes'],
+                            $functionInfo,
+                            $displayName,
+                            $error,
+                            null,
+                            null
+                        );
+
+                        /** @var array<string, array<int, string>> $error */
+                        $returnCheckResult = CheckPhpDocType::migrateMissingReturnErrorsToDiagnostics(
+                            $error,
+                            $diagnostics,
+                            $functionInfo['file'] ?? '',
+                            $functionInfo['line'] ?? null,
+                            $displayName,
+                            $functionName,
+                            'function_return_phpdoc'
+                        );
+                        $error = $returnCheckResult['errors'];
+                        $diagnostics = $returnCheckResult['diagnostics'];
+                    }
+                } else {
                 $displayName = $functionName . '()';
                 $diagnostics = $diagnostics->with(
                     new Diagnostic(
