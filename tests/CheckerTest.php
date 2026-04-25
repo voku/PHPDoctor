@@ -3075,20 +3075,21 @@ PHP
         static::assertSame(0, $exitCode);
     }
 
-    public function testCommandExecuteLoadsBootstrapAutoloadFileBeforeParser(): void
+    public function testBootstrapAutoloadFileLoadsBeforeParser(): void
     {
         $directory = \sys_get_temp_dir() . '/phpdoctor-autoload-' . \bin2hex(\random_bytes(8));
-        static::assertTrue(\mkdir($directory));
-        static::assertTrue(\mkdir($directory . '/vendor'));
         $bootstrapHelper = $directory . '/bootstrap-helper.php';
         $vendorAutoload = $directory . '/vendor/autoload.php';
         $bootstrapFile = $directory . '/phpstan-bootstrap.php';
 
-        \file_put_contents($bootstrapHelper, '<?php return true;' . "\n");
-        \file_put_contents($vendorAutoload, '<?php return true;' . "\n");
-        \file_put_contents(
-            $bootstrapFile,
-            <<<'PHP'
+        try {
+            static::assertTrue(\mkdir($directory));
+            static::assertTrue(\mkdir($directory . '/vendor'));
+            \file_put_contents($bootstrapHelper, '<?php return true;' . "\n");
+            \file_put_contents($vendorAutoload, '<?php return true;' . "\n");
+            \file_put_contents(
+                $bootstrapFile,
+                <<<'PHP'
 <?php
 
 foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
@@ -3100,9 +3101,8 @@ foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
 require_once __DIR__ . '/bootstrap-helper.php';
 require_once __DIR__ . '/vendor/autoload.php';
 PHP
-        );
+            );
 
-        try {
             $tester = $this->buildCommandTester();
 
             $exitCode = $tester->execute([
