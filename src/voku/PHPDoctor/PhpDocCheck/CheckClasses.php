@@ -102,7 +102,7 @@ final class CheckClasses
             $error = $propertyCheckResult['errors'];
             $diagnostics = $propertyCheckResult['diagnostics'];
 
-            $error = self::checkMethods(
+            $methodCheckResult = self::checkMethods(
                 $class,
                 $phpInfo,
                 $access,
@@ -113,6 +113,8 @@ final class CheckClasses
                 $error,
                 $diagnostics
             );
+            $error = $methodCheckResult['errors'];
+            $diagnostics = $methodCheckResult['diagnostics'];
         }
 
         foreach ($phpInfo->getInterfaces() as $interface) {
@@ -126,7 +128,7 @@ final class CheckClasses
                 $error
             );
 
-            $error = self::checkMethods(
+            $methodCheckResult = self::checkMethods(
                 $interface,
                 $phpInfo,
                 $access,
@@ -137,6 +139,8 @@ final class CheckClasses
                 $error,
                 $diagnostics
             );
+            $error = $methodCheckResult['errors'];
+            $diagnostics = $methodCheckResult['diagnostics'];
         }
 
         foreach ($phpInfo->getEnums() as $enum) {
@@ -150,7 +154,7 @@ final class CheckClasses
                 $error
             );
 
-            $error = self::checkMethods(
+            $methodCheckResult = self::checkMethods(
                 $enum,
                 $phpInfo,
                 $access,
@@ -161,6 +165,8 @@ final class CheckClasses
                 $error,
                 $diagnostics
             );
+            $error = $methodCheckResult['errors'];
+            $diagnostics = $methodCheckResult['diagnostics'];
         }
 
         /** @var array<string, array<int, string>> $error */
@@ -182,7 +188,10 @@ final class CheckClasses
      * @param string[][]                               $error
      * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: \voku\PHPDoctor\Diagnostic\DiagnosticCollection
+     * }
      */
     private static function checkMethods(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
@@ -193,7 +202,7 @@ final class CheckClasses
         bool                                     $skipAmbiguousTypesAsError,
         bool                                     $skipParseErrorsAsError,
         array                                    $error,
-        DiagnosticCollection                     &$diagnostics
+        DiagnosticCollection                     $diagnostics
     ): array
     {
         foreach (self::getMethodsInfoFromElement(
@@ -205,7 +214,11 @@ final class CheckClasses
 
             // INFO: ignore "missing type for Exception"
             if (is_a(($class->name ?? ''), \Exception::class, true)) {
-              return $error;
+                /** @var array<string, array<int, string>> $error */
+                return [
+                    'errors' => $error,
+                    'diagnostics' => $diagnostics,
+                ];
             }
 
             if (!$skipParseErrorsAsError && $methodInfo['error']) {
@@ -287,12 +300,32 @@ final class CheckClasses
                         );
                     }
                 } else {
-                    $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: missing return type for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+                    $declaringClassName = $class->name ?? '?';
+                    $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+                    $diagnostics = $diagnostics->with(
+                        new Diagnostic(
+                            DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
+                            $methodInfo['file'] ?? '',
+                            $methodInfo['line'] ?? null,
+                            [
+                                'declaring_class' => $declaringClassName,
+                                'display_name' => $displayName,
+                                'function_or_method_name' => $methodName,
+                                'kind' => 'method',
+                                'symbol' => $displayName,
+                            ]
+                        )
+                    );
                 }
             }
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 
     /**
