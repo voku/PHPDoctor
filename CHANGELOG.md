@@ -2,7 +2,7 @@
 
 ### [Unreleased]
 
-- feat: add release notes for type and PHPDoc quality profiling across native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
+- feat: add type and PHPDoc quality profiling for native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
 - feat: document machine-readable profile output via `--output-format=json` and GitHub Actions annotation output via `--output-format=github`
 - feat: document compact baseline generation and comparison so CI can stay baseline-aware and fail or annotate only on newly introduced findings
 - internal: introduce `AnalysisResult` as the internal analysis contract
