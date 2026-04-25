@@ -7,6 +7,7 @@ namespace voku\PHPDoctor\Diagnostic;
 final class DiagnosticId
 {
     public const AMBIGUOUS_PHPDOC_PARAMETER_TYPE = 'ambiguous_phpdoc_parameter_type';
+    public const AMBIGUOUS_PHPDOC_RETURN_TYPE = 'ambiguous_phpdoc_return_type';
     public const DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG = 'deprecated_attribute_missing_phpdoc_tag';
     public const MISSING_NATIVE_PARAMETER_TYPE = 'missing_native_parameter_type';
     public const MISSING_NATIVE_PROPERTY_TYPE = 'missing_native_property_type';

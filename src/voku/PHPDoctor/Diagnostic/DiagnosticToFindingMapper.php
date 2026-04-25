@@ -41,6 +41,7 @@ final class DiagnosticToFindingMapper
     {
         return match ($diagnostic->id()) {
             DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
+            DiagnosticId::AMBIGUOUS_PHPDOC_RETURN_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => FindingCategory::fromValue(FindingCategory::DEPRECATED_DOCUMENTATION),
             DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),
             DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_NATIVE_TYPE),

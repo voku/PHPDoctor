@@ -862,6 +862,130 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsAmbiguousFunctionPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @return mixed
+         */
+        function ambiguousPhpDocReturnType()
+        {
+            return 1;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('ambiguous_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\ambiguousPhpDocReturnType()',
+                'function_or_method_name' => 'voku\tests\ambiguousPhpDocReturnType',
+                'kind' => 'function_return_phpdoc_ambiguous',
+                'phpdoc_type' => 'mixed',
+                'symbol' => 'voku\tests\ambiguousPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsAmbiguousMethodPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @return array
+             */
+            public function ambiguousPhpDocReturnType()
+            {
+                return [];
+            }
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('ambiguous_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                'function_or_method_name' => 'ambiguousPhpDocReturnType',
+                'kind' => 'method_return_phpdoc_ambiguous',
+                'phpdoc_type' => 'array',
+                'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
     public function testAnalyseStringReturnsMissingFunctionPhpDocParameterTypeDiagnostics(): void
     {
         $code = '<?php

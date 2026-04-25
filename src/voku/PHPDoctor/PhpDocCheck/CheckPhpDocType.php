@@ -402,6 +402,55 @@ final class CheckPhpDocType
     }
 
     /**
+     * @param array{
+     *     type: null|string,
+     *     typeFromPhpDoc: null|string,
+     *     typeFromPhpDocExtended: null|string,
+     *     typeFromPhpDocSimple: null|string,
+     *     typeFromPhpDocMaybeWithComment: null|string
+     * } $returnTypes
+     */
+    public static function ambiguousReturnDiagnostic(
+        string $file,
+        ?int $line,
+        string $displayName,
+        string $functionOrMethodName,
+        array $returnTypes,
+        string $kind,
+        ?string $declaringClass = null
+    ): ?Diagnostic {
+        $phpdocType = self::ambiguousPhpDocType($returnTypes);
+        if ($phpdocType === null) {
+            return null;
+        }
+
+        $diagnosticEvidence = [];
+        if ($declaringClass !== null) {
+            $diagnosticEvidence['declaring_class'] = $declaringClass;
+        }
+
+        $nativeType = $returnTypes['type'] ?? null;
+        if (\is_string($nativeType) && $nativeType !== '') {
+            $diagnosticEvidence['native_type'] = $nativeType;
+        }
+
+        $diagnosticEvidence += [
+            'display_name' => $displayName,
+            'function_or_method_name' => $functionOrMethodName,
+            'kind' => $kind,
+            'phpdoc_type' => $phpdocType,
+            'symbol' => $displayName,
+        ];
+
+        return new Diagnostic(
+            DiagnosticId::AMBIGUOUS_PHPDOC_RETURN_TYPE,
+            $file,
+            $line,
+            $diagnosticEvidence
+        );
+    }
+
+    /**
      * @param array<string, array<int, string>> $errors
      *
      * @return array<int, string>|null

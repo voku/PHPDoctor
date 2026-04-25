@@ -10,10 +10,11 @@ final class DiagnosticToLegacyMessageMapper
     {
         return match ($diagnostic->id()) {
             DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE => self::missingNativeParameterTypeMessage($diagnostic),
+            DiagnosticId::AMBIGUOUS_PHPDOC_RETURN_TYPE => self::missingNativeReturnTypeMessage($diagnostic),
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => '[' . ($diagnostic->line() ?? '?') . ']: missing @deprecated tag in phpdoc from ' . self::displayName($diagnostic),
             DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => self::missingNativeParameterTypeMessage($diagnostic),
             DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing property type for ' . self::displayName($diagnostic) . '->$' . self::propertyName($diagnostic),
-            DiagnosticId::MISSING_NATIVE_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing return type for ' . self::displayName($diagnostic),
+            DiagnosticId::MISSING_NATIVE_RETURN_TYPE => self::missingNativeReturnTypeMessage($diagnostic),
             DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type "' . self::missingType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic) . ' | parameter:' . self::parameterName($diagnostic),
             DiagnosticId::MISSING_PHPDOC_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing return type "' . self::missingType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic),
             DiagnosticId::PARSER_SYNTAX_ERROR => self::legacyMessage($diagnostic),
@@ -29,6 +30,11 @@ final class DiagnosticToLegacyMessageMapper
             . self::displayName($diagnostic)
             . ' | parameter:'
             . self::parameterName($diagnostic);
+    }
+
+    private static function missingNativeReturnTypeMessage(Diagnostic $diagnostic): string
+    {
+        return '[' . ($diagnostic->line() ?? '?') . ']: missing return type for ' . self::displayName($diagnostic);
     }
 
     private static function displayName(Diagnostic $diagnostic): string

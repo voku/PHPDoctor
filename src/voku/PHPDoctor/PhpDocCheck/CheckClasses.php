@@ -335,8 +335,17 @@ final class CheckClasses
                 } else {
                     $declaringClassName = $class->name ?? '?';
                     $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+                    $diagnostic = CheckPhpDocType::ambiguousReturnDiagnostic(
+                        $methodInfo['file'] ?? '',
+                        $methodInfo['line'] ?? null,
+                        $displayName,
+                        $methodName,
+                        $methodInfo['returnTypes'],
+                        'method_return_phpdoc_ambiguous',
+                        $declaringClassName
+                    );
                     $diagnostics = $diagnostics->with(
-                        new Diagnostic(
+                        $diagnostic ?? new Diagnostic(
                             DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
                             $methodInfo['file'] ?? '',
                             $methodInfo['line'] ?? null,
