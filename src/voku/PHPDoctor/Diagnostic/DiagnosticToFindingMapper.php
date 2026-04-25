@@ -48,6 +48,7 @@ final class DiagnosticToFindingMapper
             DiagnosticId::MISSING_PHPDOC_RETURN_TYPE => FindingCategory::fromValue(FindingCategory::MISSING_PHPDOC_TYPE),
             DiagnosticId::PARSER_SYNTAX_ERROR => FindingCategory::fromValue(FindingCategory::PARSE_ERROR),
             DiagnosticId::WRONG_PHPDOC_PARAMETER_TYPE => FindingCategory::fromValue(FindingCategory::WRONG_PHPDOC_TYPE),
+            DiagnosticId::WRONG_PHPDOC_RETURN_TYPE => FindingCategory::fromValue(FindingCategory::WRONG_PHPDOC_TYPE),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
     }

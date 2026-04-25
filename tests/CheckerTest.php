@@ -1066,6 +1066,116 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsWrongFunctionPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string|int
+         */
+        function wrongPhpDocReturnType(string $value): string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('wrong_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'native_type' => 'string',
+                'display_name' => 'voku\tests\wrongPhpDocReturnType()',
+                'function_or_method_name' => 'voku\tests\wrongPhpDocReturnType',
+                'kind' => 'function_return_phpdoc_wrong',
+                'phpdoc_type' => 'int',
+                'symbol' => 'voku\tests\wrongPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: wrong return type "int" in phpdoc from voku\tests\wrongPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[8]: wrong return type "int" in phpdoc from voku\tests\wrongPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsWrongMethodPhpDocReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @param string $value
+             * @return string|int
+             */
+            public function wrongPhpDocReturnType(string $value): string
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('wrong_phpdoc_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'native_type' => 'string',
+                'display_name' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+                'function_or_method_name' => 'wrongPhpDocReturnType',
+                'kind' => 'method_return_phpdoc_wrong',
+                'phpdoc_type' => 'int',
+                'symbol' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: wrong return type "int" in phpdoc from voku\tests\SimpleClass->wrongPhpDocReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[10]: wrong return type "int" in phpdoc from voku\tests\SimpleClass->wrongPhpDocReturnType()'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
     public function testAnalyseStringReturnsMultipleMissingPhpDocParameterTypeDiagnostics(): void
     {
         $code = '<?php
@@ -1258,6 +1368,30 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[8]: missing return type "null" in phpdoc from voku\tests\missingPhpDocReturnType()',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForWrongPhpDocReturnType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string $value
+         * @return string|int
+         */
+        function wrongPhpDocReturnType(string $value): string
+        {
+            return $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: wrong return type "int" in phpdoc from voku\tests\wrongPhpDocReturnType()',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)
