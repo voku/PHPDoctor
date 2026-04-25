@@ -267,6 +267,14 @@ final class CheckFunctions
         foreach ($functionInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
+            $paramTypesNormalized = $paramTypes + [
+                'type' => null,
+                'typeFromPhpDoc' => null,
+                'typeFromPhpDocExtended' => null,
+                'typeFromPhpDocSimple' => null,
+                'typeFromPhpDocMaybeWithComment' => null,
+                'typeFromDefaultValue' => null,
+            ];
 
             if (
                 isset($functionInfo['paramsPhpDocRaw'][$paramName])
@@ -291,16 +299,8 @@ final class CheckFunctions
             }
 
             if ($typeFound) {
-                if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                if (($paramTypesNormalized['typeFromPhpDocSimple'] ?? null) && ($paramTypesNormalized['type'] ?? null)) {
                     $displayName = $functionName . '()';
-                    $paramTypesNormalized = $paramTypes + [
-                        'type' => null,
-                        'typeFromPhpDoc' => null,
-                        'typeFromPhpDocExtended' => null,
-                        'typeFromPhpDocSimple' => null,
-                        'typeFromPhpDocMaybeWithComment' => null,
-                        'typeFromDefaultValue' => null,
-                    ];
 
                     $error = CheckPhpDocType::checkPhpDocType(
                         $paramTypesNormalized,
@@ -344,8 +344,18 @@ final class CheckFunctions
                 }
             } else {
                 $displayName = $functionName . '()';
+                $diagnostic = CheckPhpDocType::ambiguousParameterDiagnostic(
+                    $functionInfo['file'] ?? '',
+                    $functionInfo['line'] ?? null,
+                    $displayName,
+                    $functionName,
+                    $paramName,
+                    $paramTypesNormalized,
+                    'function_parameter_phpdoc_ambiguous',
+                    $parameterPosition
+                );
                 $diagnostics = $diagnostics->with(
-                    new Diagnostic(
+                    $diagnostic ?? new Diagnostic(
                         DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
                         $functionInfo['file'] ?? '',
                         $functionInfo['line'] ?? null,

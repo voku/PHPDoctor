@@ -9,8 +9,9 @@ final class DiagnosticToLegacyMessageMapper
     public static function map(Diagnostic $diagnostic): string
     {
         return match ($diagnostic->id()) {
+            DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE => self::missingNativeParameterTypeMessage($diagnostic),
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => '[' . ($diagnostic->line() ?? '?') . ']: missing @deprecated tag in phpdoc from ' . self::displayName($diagnostic),
-            DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type for ' . self::displayName($diagnostic) . ' | parameter:' . self::parameterName($diagnostic),
+            DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => self::missingNativeParameterTypeMessage($diagnostic),
             DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing property type for ' . self::displayName($diagnostic) . '->$' . self::propertyName($diagnostic),
             DiagnosticId::MISSING_NATIVE_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing return type for ' . self::displayName($diagnostic),
             DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type "' . self::missingType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic) . ' | parameter:' . self::parameterName($diagnostic),
@@ -20,6 +21,14 @@ final class DiagnosticToLegacyMessageMapper
             DiagnosticId::WRONG_PHPDOC_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: wrong return type "' . self::phpdocType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
+    }
+
+    private static function missingNativeParameterTypeMessage(Diagnostic $diagnostic): string
+    {
+        return '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type for '
+            . self::displayName($diagnostic)
+            . ' | parameter:'
+            . self::parameterName($diagnostic);
     }
 
     private static function displayName(Diagnostic $diagnostic): string

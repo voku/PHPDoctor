@@ -984,6 +984,14 @@ final class CheckClasses
         foreach ($methodInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
+            $paramTypesNormalized = $paramTypes + [
+                'type' => null,
+                'typeFromPhpDoc' => null,
+                'typeFromPhpDocExtended' => null,
+                'typeFromPhpDocSimple' => null,
+                'typeFromPhpDocMaybeWithComment' => null,
+                'typeFromDefaultValue' => null,
+            ];
 
             if (
                 isset($methodInfo['paramsPhpDocRaw'][$paramName])
@@ -1008,17 +1016,9 @@ final class CheckClasses
             }
 
             if ($typeFound) {
-                if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                if (($paramTypesNormalized['typeFromPhpDocSimple'] ?? null) && ($paramTypesNormalized['type'] ?? null)) {
                     $declaringClassName = $class->name ?? '?';
                     $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
-                    $paramTypesNormalized = $paramTypes + [
-                        'type' => null,
-                        'typeFromPhpDoc' => null,
-                        'typeFromPhpDocExtended' => null,
-                        'typeFromPhpDocSimple' => null,
-                        'typeFromPhpDocMaybeWithComment' => null,
-                        'typeFromDefaultValue' => null,
-                    ];
 
                     $error = CheckPhpDocType::checkPhpDocType(
                         $paramTypesNormalized,
@@ -1064,8 +1064,19 @@ final class CheckClasses
             } else {
                 $declaringClassName = $class->name ?? '?';
                 $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+                $diagnostic = CheckPhpDocType::ambiguousParameterDiagnostic(
+                    $methodInfo['file'] ?? '',
+                    $methodInfo['line'] ?? null,
+                    $displayName,
+                    $methodName,
+                    $paramName,
+                    $paramTypesNormalized,
+                    'method_parameter_phpdoc_ambiguous',
+                    $parameterPosition,
+                    $declaringClassName
+                );
                 $diagnostics = $diagnostics->with(
-                    new Diagnostic(
+                    $diagnostic ?? new Diagnostic(
                         DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
                         $methodInfo['file'] ?? '',
                         $methodInfo['line'] ?? null,

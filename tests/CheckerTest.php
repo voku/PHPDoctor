@@ -732,6 +732,136 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsAmbiguousFunctionPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param mixed $value
+         * @return string
+         */
+        function ambiguousPhpDocParameterType($value): string
+        {
+            return (string) $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing parameter type for voku\tests\ambiguousPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('ambiguous_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\ambiguousPhpDocParameterType()',
+                'function_or_method_name' => 'voku\tests\ambiguousPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'function_parameter_phpdoc_ambiguous',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'mixed',
+                'symbol' => 'voku\tests\ambiguousPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: missing parameter type for voku\tests\ambiguousPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[8]: missing parameter type for voku\tests\ambiguousPhpDocParameterType() | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsAmbiguousMethodPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @param array $value
+             * @return string
+             */
+            public function ambiguousPhpDocParameterType($value): string
+            {
+                return (string) $value;
+            }
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: missing parameter type for voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('ambiguous_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType()',
+                'function_or_method_name' => 'ambiguousPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter_phpdoc_ambiguous',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'array',
+                'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: missing parameter type for voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[10]: missing parameter type for voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
     public function testAnalyseStringReturnsMissingFunctionPhpDocParameterTypeDiagnostics(): void
     {
         $code = '<?php
