@@ -17,6 +17,7 @@ use voku\PHPDoctor\Baseline\BaselineFlow;
 use voku\PHPDoctor\Baseline\BaselineFlowException;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
 use voku\PHPDoctor\QualityProfile;
+use voku\PHPDoctor\Report\GithubActionsReporter;
 use voku\PHPDoctor\Report\JsonProfileReporter;
 use voku\PHPDoctor\Report\TextProfileReporter;
 
@@ -113,12 +114,12 @@ final class PhpDoctorCommand extends Command
                  'Show a type and PHPDoc quality profile summary. (false or true)',
                  'false'
              )->addOption(
-                 'output-format',
-                 null,
-                 InputOption::VALUE_OPTIONAL,
-                 'Output format for the analysis result. (text or json)',
-                 'text'
-             )->addOption(
+                  'output-format',
+                  null,
+                  InputOption::VALUE_OPTIONAL,
+                  'Output format for the analysis result. (text, json or github)',
+                  'text'
+              )->addOption(
                  'baseline-file',
                  null,
                  InputOption::VALUE_OPTIONAL,
@@ -191,9 +192,9 @@ final class PhpDoctorCommand extends Command
 
         $outputFormat = $input->getOption('output-format');
         \assert(\is_string($outputFormat));
-        if (!\in_array($outputFormat, ['text', 'json'], true)) {
+        if (!\in_array($outputFormat, ['text', 'json', 'github'], true)) {
             $output->writeln('-------------------------------');
-            $output->writeln('The output-format "' . $outputFormat . '" is not supported. Use "text" or "json".');
+            $output->writeln('The output-format "' . $outputFormat . '" is not supported. Use "text", "json" or "github".');
             $output->writeln('-------------------------------');
 
             return 2;
@@ -263,6 +264,12 @@ final class PhpDoctorCommand extends Command
 
         if ($outputFormat === 'json') {
             JsonProfileReporter::write($output, $qualityProfile);
+
+            return $qualityProfile['new_error_count'] > 0 ? 1 : 0;
+        }
+
+        if ($outputFormat === 'github') {
+            GithubActionsReporter::write($output, $qualityProfile, $baselineFile !== '');
 
             return $qualityProfile['new_error_count'] > 0 ? 1 : 0;
         }

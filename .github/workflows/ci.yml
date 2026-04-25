@@ -115,3 +115,6 @@ jobs:
           if echo "$output" | grep -qE '^[1-9][0-9]* errors detected\.[[:space:]]*$'; then
             exit 1
           fi
+
+      - name: Run PHPDoctor GitHub annotations
+        run: php bin/phpdoctor analyse src --output-format=github

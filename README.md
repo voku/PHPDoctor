@@ -48,7 +48,7 @@ Options:
       --path-exclude-regex[=PATH-EXCLUDE-REGEX]                                          Skip some paths via regex e.g. "#/vendor/|/other/.*/path/#i" [default: "#/vendor/|/tests/#i"]
       --file-extensions[=FILE-EXTENSIONS]                                                Check different file extensions e.g. ".php|.php4|.php5|.inc" [default: ".php"]
       --profile[=PROFILE]                                                                Show a type and PHPDoc quality profile summary. (false or true) [default: "false"]
-      --output-format[=OUTPUT-FORMAT]                                                    Output format for the analysis result. (text or json) [default: "text"]
+      --output-format[=OUTPUT-FORMAT]                                                    Output format for the analysis result. (text, json or github) [default: "text"]
       --baseline-file[=BASELINE-FILE]                                                    Compare against a PHPDoctor JSON baseline file so only new findings fail.
       --generate-baseline[=GENERATE-BASELINE]                                            Write the current type and PHPDoc profile to --baseline-file. (false or true) [default: "false"]
 ```
@@ -88,6 +88,32 @@ Emit JSON for dashboards:
 ```bash
 php vendor/bin/phpdoctor analyse src --output-format=json
 ```
+
+Emit GitHub Actions workflow annotations:
+
+```bash
+php vendor/bin/phpdoctor analyse src --output-format=github
+```
+
+Use GitHub Actions annotations with a minimal workflow step:
+
+```yaml
+- name: Run PHPDoctor GitHub annotations
+  run: php vendor/bin/phpdoctor analyse src --output-format=github
+```
+
+Use baseline-aware GitHub Actions annotations so only new findings are annotated:
+
+```yaml
+- name: Run PHPDoctor GitHub annotations with baseline
+  run: php vendor/bin/phpdoctor analyse src --baseline-file=phpdoctor-baseline.json --output-format=github
+```
+
+Exit codes:
+
+- `0`: no findings, or no new findings when `--baseline-file` is active
+- `1`: findings found, or new findings found when `--baseline-file` is active
+- `2`: CLI, configuration, or baseline errors
 
 ### Demo
 
