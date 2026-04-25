@@ -485,6 +485,41 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(['legacy_message' => $errors[0]], $diagnostics[0]->evidence());
     }
 
+    public function testAnalyseStringReturnsMissingPropertyTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            public $foo;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code, ['public'], false, false, false, false);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_native_property_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\SimpleClass',
+                'property_name' => 'foo',
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'symbol' => 'voku\tests\SimpleClass->$foo',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing property type for voku\tests\SimpleClass->$foo',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
     public function testCheckFromStringStillReturnsLegacyArray(): void
     {
         $code = '<?php

@@ -132,6 +132,29 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testMissingNativePropertyTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE,
+            'test_file.php',
+            3,
+            [
+                'display_name' => 'voku\tests\SimpleClass',
+                'property_name' => 'foo',
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'symbol' => 'voku\tests\SimpleClass->$foo',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[3]: missing property type for voku\tests\SimpleClass->$foo'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
@@ -284,6 +307,35 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                     '',
                     null,
                     ['legacy_message' => $message]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
+
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithMissingNativePropertyTypeDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE,
+                    'test_file.php',
+                    3,
+                    [
+                        'display_name' => 'voku\tests\SimpleClass',
+                        'property_name' => 'foo',
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'symbol' => 'voku\tests\SimpleClass->$foo',
+                    ]
                 ),
             ])
         );

@@ -91,13 +91,16 @@ final class CheckClasses
                 $error
             );
 
-            $error = self::checkProperties(
+            $propertyCheckResult = self::checkProperties(
                 $class,
                 $access,
                 $skipMethodsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
-                $error
+                $error,
+                $diagnostics
             );
+            $error = $propertyCheckResult['errors'];
+            $diagnostics = $propertyCheckResult['diagnostics'];
 
             $error = self::checkMethods(
                 $class,
@@ -966,20 +969,30 @@ final class CheckClasses
      * @param bool                                     $skipMethodsWithLeadingUnderscore
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param string[][]                               $error
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: \voku\PHPDoctor\Diagnostic\DiagnosticCollection
+     * }
      */
     private static function checkProperties(
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait $class,
         array                                    $access,
         bool                                     $skipMethodsWithLeadingUnderscore,
         bool                                     $skipAmbiguousTypesAsError,
-        array                                    $error
+        array                                    $error,
+        DiagnosticCollection                     $diagnostics
     ): array
     {
+        /** @var array<string, array<int, string>> $error */
+
         // INFO: ignore "missing type for Exception"
         if (is_a(($class->name ?? ''), \Exception::class, true)) {
-          return $error;
+            return [
+                'errors' => $error,
+                'diagnostics' => $diagnostics,
+            ];
         }
 
         foreach ($class->getPropertiesInfo(
@@ -1045,10 +1058,28 @@ final class CheckClasses
                     );
                 }
             } else {
-                $error[$class->file ?? ''][] = '[' . ($class->line ?? '?') . ']: missing property type for ' . ($class->name ?? '?') . '->$' . $propertyName;
+                $declaringClassName = $class->name ?? '?';
+                $diagnostics = $diagnostics->with(
+                    new Diagnostic(
+                        DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE,
+                        $class->file ?? '',
+                        $class->line ?? null,
+                        [
+                            'display_name' => $declaringClassName,
+                            'property_name' => $propertyName,
+                            'declaring_class' => $declaringClassName,
+                            'symbol' => $declaringClassName . '->$' . $propertyName,
+                        ]
+                    )
+                );
             }
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 }

@@ -10,6 +10,7 @@ final class DiagnosticToLegacyMessageMapper
     {
         return match ($diagnostic->id()) {
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => '[' . ($diagnostic->line() ?? '?') . ']: missing @deprecated tag in phpdoc from ' . self::displayName($diagnostic),
+            DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing property type for ' . self::displayName($diagnostic) . '->$' . self::propertyName($diagnostic),
             DiagnosticId::PARSER_SYNTAX_ERROR => self::legacyMessage($diagnostic),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
@@ -27,5 +28,12 @@ final class DiagnosticToLegacyMessageMapper
         $legacyMessage = $diagnostic->evidence()['legacy_message'] ?? '';
 
         return \is_string($legacyMessage) ? $legacyMessage : '';
+    }
+
+    private static function propertyName(Diagnostic $diagnostic): string
+    {
+        $propertyName = $diagnostic->evidence()['property_name'] ?? '?';
+
+        return \is_string($propertyName) ? $propertyName : '?';
     }
 }
