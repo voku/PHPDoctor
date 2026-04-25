@@ -582,4 +582,82 @@ final class CheckPhpDocType
             'diagnostics' => $diagnostics,
         ];
     }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
+    public static function migrateWrongReturnErrorsToDiagnostics(
+        array $errors,
+        DiagnosticCollection $diagnostics,
+        string $file,
+        ?int $line,
+        string $displayName,
+        string $functionOrMethodName,
+        string $kind,
+        ?string $declaringClass = null,
+        ?string $nativeType = null
+    ): array {
+        /** @var array<int, string>|null $messages */
+        $messages = $errors[$file] ?? null;
+        if (!\is_array($messages)) {
+            return [
+                'errors' => $errors,
+                'diagnostics' => $diagnostics,
+            ];
+        }
+
+        $pattern = '/^\[(\d+|\?)\]: wrong return type "([^"]+)" in phpdoc from '
+            . \preg_quote($displayName, '/')
+            . '$/';
+
+        $remainingMessages = [];
+        foreach ($messages as $message) {
+            if (\preg_match($pattern, $message, $matches) !== 1) {
+                $remainingMessages[] = $message;
+
+                continue;
+            }
+
+            $diagnosticEvidence = [];
+            if ($declaringClass !== null) {
+                $diagnosticEvidence['declaring_class'] = $declaringClass;
+            }
+            if ($nativeType !== null && $nativeType !== '') {
+                $diagnosticEvidence['native_type'] = $nativeType;
+            }
+
+            $diagnosticEvidence += [
+                'display_name' => $displayName,
+                'function_or_method_name' => $functionOrMethodName,
+                'kind' => $kind,
+                'phpdoc_type' => $matches[2],
+                'symbol' => $displayName,
+            ];
+
+            $diagnostics = $diagnostics->with(
+                new Diagnostic(
+                    DiagnosticId::WRONG_PHPDOC_RETURN_TYPE,
+                    $file,
+                    $matches[1] !== '?' ? (int) $matches[1] : $line,
+                    $diagnosticEvidence
+                )
+            );
+        }
+
+        if ($remainingMessages === []) {
+            unset($errors[$file]);
+        } else {
+            $errors[$file] = $remainingMessages;
+        }
+
+        return [
+            'errors' => $errors,
+            'diagnostics' => $diagnostics,
+        ];
+    }
 }

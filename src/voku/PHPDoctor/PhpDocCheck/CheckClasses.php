@@ -317,6 +317,20 @@ final class CheckClasses
                         );
                         $error = $returnCheckResult['errors'];
                         $diagnostics = $returnCheckResult['diagnostics'];
+
+                        $returnCheckResult = CheckPhpDocType::migrateWrongReturnErrorsToDiagnostics(
+                            $error,
+                            $diagnostics,
+                            $methodInfo['file'] ?? '',
+                            $methodInfo['line'] ?? null,
+                            $displayName,
+                            $methodName,
+                            'method_return_phpdoc_wrong',
+                            $declaringClassName,
+                            $methodInfo['returnTypes']['type']
+                        );
+                        $error = $returnCheckResult['errors'];
+                        $diagnostics = $returnCheckResult['diagnostics'];
                     }
                 } else {
                     $declaringClassName = $class->name ?? '?';

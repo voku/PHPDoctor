@@ -154,6 +154,20 @@ final class CheckFunctions
                         );
                         $error = $returnCheckResult['errors'];
                         $diagnostics = $returnCheckResult['diagnostics'];
+
+                        $returnCheckResult = CheckPhpDocType::migrateWrongReturnErrorsToDiagnostics(
+                            $error,
+                            $diagnostics,
+                            $functionInfo['file'] ?? '',
+                            $functionInfo['line'] ?? null,
+                            $displayName,
+                            $functionName,
+                            'function_return_phpdoc_wrong',
+                            null,
+                            $functionInfo['returnTypes']['type']
+                        );
+                        $error = $returnCheckResult['errors'];
+                        $diagnostics = $returnCheckResult['diagnostics'];
                     }
                 } else {
                 $displayName = $functionName . '()';

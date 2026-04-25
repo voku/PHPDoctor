@@ -285,6 +285,32 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testWrongPhpDocReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::WRONG_PHPDOC_RETURN_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'native_type' => 'int',
+                'display_name' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+                'function_or_method_name' => 'wrongPhpDocReturnType',
+                'kind' => 'method_return_phpdoc_wrong',
+                'phpdoc_type' => 'string',
+                'symbol' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: wrong return type "string" in phpdoc from voku\tests\SimpleClass->wrongPhpDocReturnType()'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
@@ -608,6 +634,40 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame(0, $profile['new_error_count']);
         static::assertSame(1, $profile['summary']['missing_phpdoc_type']);
         static::assertSame(0, $profile['new_summary']['missing_phpdoc_type']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithWrongPhpDocReturnTypeDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::WRONG_PHPDOC_RETURN_TYPE,
+                    'test_file.php',
+                    8,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'native_type' => 'int',
+                        'display_name' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+                        'function_or_method_name' => 'wrongPhpDocReturnType',
+                        'kind' => 'method_return_phpdoc_wrong',
+                        'phpdoc_type' => 'string',
+                        'symbol' => 'voku\tests\SimpleClass->wrongPhpDocReturnType()',
+                    ]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
+
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame(1, $profile['summary']['wrong_phpdoc_type']);
+        static::assertSame(0, $profile['new_summary']['wrong_phpdoc_type']);
         static::assertSame([], $profile['new_findings']);
     }
 
