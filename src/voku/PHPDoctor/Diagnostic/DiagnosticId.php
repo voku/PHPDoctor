@@ -13,6 +13,7 @@ final class DiagnosticId
     public const MISSING_PHPDOC_PARAMETER_TYPE = 'missing_phpdoc_parameter_type';
     public const MISSING_PHPDOC_RETURN_TYPE = 'missing_phpdoc_return_type';
     public const PARSER_SYNTAX_ERROR = 'parser_syntax_error';
+    public const WRONG_PHPDOC_PARAMETER_TYPE = 'wrong_phpdoc_parameter_type';
 
     private function __construct()
     {
