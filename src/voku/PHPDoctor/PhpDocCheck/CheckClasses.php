@@ -1048,17 +1048,17 @@ final class CheckClasses
                     );
                 }
             } else {
-                $className = $class->name ?? '?';
+                $declaringClassName = $class->name ?? '?';
                 $diagnostics = $diagnostics->with(
                     new Diagnostic(
                         DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE,
                         $class->file ?? '',
                         $class->line ?? null,
                         [
-                            'display_name' => $className,
+                            'display_name' => $declaringClassName,
                             'property_name' => $propertyName,
-                            'declaring_class' => $className,
-                            'symbol' => $className . '->$' . $propertyName,
+                            'declaring_class' => $declaringClassName,
+                            'symbol' => $declaringClassName . '->$' . $propertyName,
                         ]
                     )
                 );
