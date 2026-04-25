@@ -455,7 +455,7 @@ final class CheckPhpDocType
             ];
         }
 
-        $pattern = '/^\[(\d+|\?)\]: wrong parameter type "(.+)" in phpdoc from '
+        $pattern = '/^\[(\d+|\?)\]: wrong parameter type "([^"]+)" in phpdoc from '
             . \preg_quote($displayName, '/')
             . '  \| parameter:'
             . \preg_quote($parameterName, '/')
