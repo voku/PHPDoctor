@@ -264,6 +264,7 @@ final class CheckFunctions
 
             if ($typeFound) {
                 if (($paramTypes['typeFromPhpDocSimple'] ?? null) && ($paramTypes['type'] ?? null)) {
+                    $displayName = $functionName . '()';
                     $paramTypesNormalized = $paramTypes + [
                         'type' => null,
                         'typeFromPhpDoc' => null,
@@ -276,11 +277,26 @@ final class CheckFunctions
                     $error = CheckPhpDocType::checkPhpDocType(
                         $paramTypesNormalized,
                         $functionInfo,
-                        $functionName . '()',
+                        $displayName,
                         $error,
                         null,
                         $paramName
                     );
+
+                    /** @var array<string, array<int, string>> $error */
+                    $parameterCheckResult = CheckPhpDocType::migrateMissingParameterErrorsToDiagnostics(
+                        $error,
+                        $diagnostics,
+                        $functionInfo['file'] ?? '',
+                        $functionInfo['line'] ?? null,
+                        $displayName,
+                        $functionName,
+                        $paramName,
+                        'function_parameter_phpdoc',
+                        $parameterPosition
+                    );
+                    $error = $parameterCheckResult['errors'];
+                    $diagnostics = $parameterCheckResult['diagnostics'];
                 }
             } else {
                 $displayName = $functionName . '()';

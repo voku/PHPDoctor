@@ -2,6 +2,9 @@
 
 namespace voku\PHPDoctor\PhpDocCheck;
 
+use voku\PHPDoctor\Diagnostic\Diagnostic;
+use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
+use voku\PHPDoctor\Diagnostic\DiagnosticId;
 use voku\SimplePhpParser\Parsers\Helper\Utils;
 
 /**
@@ -340,5 +343,85 @@ final class CheckPhpDocType
         }
 
         return $errors;
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
+    public static function migrateMissingParameterErrorsToDiagnostics(
+        array $errors,
+        DiagnosticCollection $diagnostics,
+        string $file,
+        ?int $line,
+        string $displayName,
+        string $functionOrMethodName,
+        string $parameterName,
+        string $kind,
+        int $parameterPosition,
+        ?string $declaringClass = null
+    ): array {
+        /** @var array<int, string>|null $messages */
+        $messages = $errors[$file] ?? null;
+        if (!\is_array($messages)) {
+            return [
+                'errors' => $errors,
+                'diagnostics' => $diagnostics,
+            ];
+        }
+
+        $pattern = '/^\[(\d+|\?)\]: missing parameter type "(.+)" in phpdoc from '
+            . \preg_quote($displayName, '/')
+            . ' \| parameter:'
+            . \preg_quote($parameterName, '/')
+            . '$/';
+
+        $remainingMessages = [];
+        foreach ($messages as $message) {
+            if (\preg_match($pattern, $message, $matches) !== 1) {
+                $remainingMessages[] = $message;
+
+                continue;
+            }
+
+            $diagnosticEvidence = [];
+            if ($declaringClass !== null) {
+                $diagnosticEvidence['declaring_class'] = $declaringClass;
+            }
+
+            $diagnosticEvidence += [
+                'display_name' => $displayName,
+                'function_or_method_name' => $functionOrMethodName,
+                'parameter_name' => $parameterName,
+                'kind' => $kind,
+                'missing_type' => $matches[2],
+                'parameter_position' => $parameterPosition,
+                'symbol' => $displayName . ' | parameter:' . $parameterName,
+            ];
+
+            $diagnostics = $diagnostics->with(
+                new Diagnostic(
+                    DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE,
+                    $file,
+                    $matches[1] !== '?' ? (int) $matches[1] : $line,
+                    $diagnosticEvidence
+                )
+            );
+        }
+
+        if ($remainingMessages === []) {
+            unset($errors[$file]);
+        } else {
+            $errors[$file] = $remainingMessages;
+        }
+
+        return [
+            'errors' => $errors,
+            'diagnostics' => $diagnostics,
+        ];
     }
 }
