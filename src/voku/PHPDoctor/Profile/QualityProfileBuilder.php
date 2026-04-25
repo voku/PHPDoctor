@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\Profile;
 
+use voku\PHPDoctor\Analysis\AnalysisResult;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
 use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
@@ -30,6 +31,20 @@ final class QualityProfileBuilder
     ): QualityProfile {
         return self::fromFindings(
             DiagnosticToFindingMapper::mapAll($errors, $diagnostics),
+            $baselineFingerprints
+        );
+    }
+
+    /**
+     * @param string[] $baselineFingerprints
+     */
+    public static function fromAnalysisResult(
+        AnalysisResult $analysisResult,
+        array $baselineFingerprints = []
+    ): QualityProfile {
+        return self::fromErrorsAndDiagnostics(
+            $analysisResult->toLegacyErrors(),
+            $analysisResult->diagnostics(),
             $baselineFingerprints
         );
     }

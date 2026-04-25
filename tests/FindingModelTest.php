@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 namespace voku\tests;
 
+use voku\PHPDoctor\Analysis\AnalysisResult;
 use voku\PHPDoctor\Baseline\BaselineBuilder;
+use voku\PHPDoctor\Baseline\BaselineFlow;
 use voku\PHPDoctor\Baseline\BaselineReader;
 use voku\PHPDoctor\Diagnostic\Diagnostic;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
@@ -199,6 +201,30 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testQualityProfileBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+        $analysisResult = new AnalysisResult($diagnostics, $errors);
+
+        static::assertSame(
+            QualityProfileBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray(),
+            QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+    }
+
     public function testQualityProfileBaselineSuppressionWorksWithDeprecatedMethodDiagnostics(): void
     {
         $errors = [
@@ -298,6 +324,68 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame($legacyBaseline['tool'], $typedBaseline['tool']);
         static::assertSame($legacyBaseline['scope'], $typedBaseline['scope']);
         static::assertSame($legacyBaseline['findings'], $typedBaseline['findings']);
+    }
+
+    public function testBaselineBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+        $analysisResult = new AnalysisResult($diagnostics, $errors);
+
+        static::assertSame(
+            BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray(),
+            BaselineBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+    }
+
+    public function testBaselineFlowGenerateFromAnalysisResultWritesSameCompactSchema(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+        $analysisResult = new AnalysisResult($diagnostics, $errors);
+        $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-analysis-result-baseline-');
+        static::assertIsString($baselineFile);
+
+        try {
+            BaselineFlow::generateFromAnalysisResult($baselineFile, $analysisResult);
+
+            $generatedBaseline = \json_decode((string) \file_get_contents($baselineFile), true);
+            $expectedBaseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+
+            static::assertIsArray($generatedBaseline);
+            static::assertSame($expectedBaseline['schema_version'], $generatedBaseline['schema_version'] ?? null);
+            static::assertSame($expectedBaseline['tool'], $generatedBaseline['tool'] ?? null);
+            static::assertSame($expectedBaseline['scope'], $generatedBaseline['scope'] ?? null);
+            static::assertSame($expectedBaseline['findings'], $generatedBaseline['findings'] ?? null);
+        } finally {
+            if (\is_file($baselineFile)) {
+                \unlink($baselineFile);
+            }
+        }
     }
 
     public function testBaselineReaderSupportsLegacyAndSchemaVersionOneFormats(): void

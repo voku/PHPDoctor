@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use voku\PHPDoctor\Baseline\BaselineFlow;
 use voku\PHPDoctor\Baseline\BaselineFlowException;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
-use voku\PHPDoctor\QualityProfile;
+use voku\PHPDoctor\Profile\QualityProfileBuilder;
 use voku\PHPDoctor\Report\JsonProfileReporter;
 use voku\PHPDoctor\Report\TextProfileReporter;
 
@@ -235,11 +235,7 @@ final class PhpDoctorCommand extends Command
         );
         $errors = $analysisResult->toLegacyErrors();
 
-        $qualityProfile = QualityProfile::fromErrorsAndDiagnostics(
-            $errors,
-            $analysisResult->diagnostics(),
-            $baselineFingerprints
-        );
+        $qualityProfile = QualityProfileBuilder::fromAnalysisResult($analysisResult, $baselineFingerprints)->toArray();
 
         if ($generateBaseline) {
             if ($baselineFile === '') {
@@ -251,11 +247,7 @@ final class PhpDoctorCommand extends Command
             }
 
             try {
-                BaselineFlow::generateFromErrorsAndDiagnostics(
-                    $baselineFile,
-                    $errors,
-                    $analysisResult->diagnostics()
-                );
+                BaselineFlow::generateFromAnalysisResult($baselineFile, $analysisResult);
             } catch (BaselineFlowException $exception) {
                 $output->writeln('-------------------------------');
                 $output->writeln($exception->getMessage());

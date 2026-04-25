@@ -1353,9 +1353,22 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         ]);
 
         $profile = \json_decode($tester->getDisplay(), true);
+        $expectedProfile = QualityProfile::fromErrors(
+            PhpCodeChecker::checkPhpFiles(
+                __DIR__ . '/Dummy8.php',
+                ['public', 'protected', 'private'],
+                false,
+                false,
+                false,
+                true,
+                [],
+                ['#/vendor/#i']
+            )
+        );
 
         static::assertSame(1, $exitCode);
         static::assertIsArray($profile);
+        static::assertSame($expectedProfile, $profile);
         static::assertSame('type_and_phpdoc_quality', $profile['scope'] ?? null);
         static::assertSame(2, $profile['total_error_count'] ?? null);
         static::assertSame(2, $profile['new_error_count'] ?? null);
