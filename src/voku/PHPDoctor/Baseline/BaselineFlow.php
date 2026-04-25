@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace voku\PHPDoctor\Baseline;
 
+use voku\PHPDoctor\Analysis\AnalysisResult;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
 
 final class BaselineFlow
@@ -51,6 +52,8 @@ final class BaselineFlow
     /**
      * @param array<string, list<string>> $errors
      *
+     * Transitional compatibility path for callers that still pass legacy errors plus diagnostics.
+     *
      * @throws BaselineFlowException
      */
     public static function generateFromErrorsAndDiagnostics(
@@ -66,6 +69,25 @@ final class BaselineFlow
         $writeResult = BaselineWriter::write(
             $baselineFile,
             BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)
+        );
+        if ($writeResult === false) {
+            throw new BaselineFlowException('The baseline-file "' . $baselineFile . '" could not be written.');
+        }
+    }
+
+    /**
+     * @throws BaselineFlowException
+     */
+    public static function generateFromAnalysisResult(string $baselineFile, AnalysisResult $analysisResult): void
+    {
+        $validationError = self::validateWriteTarget($baselineFile);
+        if ($validationError !== null) {
+            throw new BaselineFlowException($validationError);
+        }
+
+        $writeResult = BaselineWriter::write(
+            $baselineFile,
+            BaselineBuilder::fromAnalysisResult($analysisResult)
         );
         if ($writeResult === false) {
             throw new BaselineFlowException('The baseline-file "' . $baselineFile . '" could not be written.');
