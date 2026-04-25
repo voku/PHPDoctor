@@ -3092,7 +3092,7 @@ PHP
 <?php
 
 foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
-    if (($frame['file'] ?? '') !== '' && str_ends_with($frame['file'], 'PhpCodeParser.php')) {
+    if (!empty($frame['file']) && str_ends_with($frame['file'], 'PhpCodeParser.php')) {
         throw new RuntimeException('bootstrap loaded from parser');
     }
 }
