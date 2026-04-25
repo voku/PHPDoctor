@@ -37,54 +37,6 @@ final class DiagnosticToFindingMapper
         );
     }
 
-    /**
-     * @param array<string, list<string>> $errors
-     *
-     * @return list<Finding>
-     */
-    public static function mapAll(array $errors, DiagnosticCollection $diagnostics): array
-    {
-        $diagnosticFindings = [];
-        foreach ($diagnostics->all() as $diagnostic) {
-            $category = self::category($diagnostic);
-            $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
-            $diagnosticFindings[$diagnostic->file()][$message][] = self::mapWithMessage(
-                $diagnostic,
-                $category,
-                $message
-            );
-        }
-
-        $findings = [];
-        foreach ($errors as $file => $messages) {
-            foreach ($messages as $message) {
-                if (isset($diagnosticFindings[$file][$message][0])) {
-                    /** @var Finding $finding */
-                    $finding = \array_shift($diagnosticFindings[$file][$message]);
-                    $findings[] = $finding;
-
-                    if ($diagnosticFindings[$file][$message] === []) {
-                        unset($diagnosticFindings[$file][$message]);
-                    }
-
-                    continue;
-                }
-
-                $findings[] = Finding::fromMessage((string) $file, $message);
-            }
-        }
-
-        foreach ($diagnosticFindings as $findingsByMessage) {
-            foreach ($findingsByMessage as $findingsForMessage) {
-                foreach ($findingsForMessage as $finding) {
-                    $findings[] = $finding;
-                }
-            }
-        }
-
-        return $findings;
-    }
-
     private static function category(Diagnostic $diagnostic): FindingCategory
     {
         return match ($diagnostic->id()) {

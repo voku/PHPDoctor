@@ -132,7 +132,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testDiagnosticToFindingMapAllAvoidsDuplicateDeprecatedMethodFinding(): void
+    public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
         $diagnostic = new Diagnostic(
@@ -142,10 +142,10 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
             ['display_name' => 'voku\tests\OldClass->oldMethod()']
         );
 
-        $findings = DiagnosticToFindingMapper::mapAll(
-            ['test_file.php' => [$message]],
+        $analysisResult = new AnalysisResult(
             new DiagnosticCollection([$diagnostic])
         );
+        $findings = $analysisResult->findings();
 
         static::assertCount(1, $findings);
         static::assertSame(
@@ -154,7 +154,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testDiagnosticToFindingMapAllAvoidsDuplicateParseErrorFinding(): void
+    public function testAnalysisResultFindingsAvoidDuplicateParseErrorFinding(): void
     {
         $message = '/tmp/parser.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
             . "\n"
@@ -166,10 +166,10 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
             ['legacy_message' => $message]
         );
 
-        $findings = DiagnosticToFindingMapper::mapAll(
-            ['' => [$message]],
+        $analysisResult = new AnalysisResult(
             new DiagnosticCollection([$diagnostic])
         );
+        $findings = $analysisResult->findings();
 
         static::assertCount(1, $findings);
         static::assertSame(
@@ -178,56 +178,31 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testQualityProfileOutputCompatibilityWithDiagnostics(): void
+    public function testQualityProfileOutputCompatibilityFromAnalysisResult(): void
     {
-        $errors = [
-            'test_file.php' => [
-                '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
-            ],
-        ];
-        $diagnostics = new DiagnosticCollection([
-            new Diagnostic(
-                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
-                'test_file.php',
-                10,
-                ['display_name' => 'voku\tests\OldClass']
-            ),
-        ]);
-
-        static::assertSame(
-            QualityProfile::fromErrors($errors),
-            QualityProfileBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray()
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                    'test_file.php',
+                    10,
+                    ['display_name' => 'voku\tests\OldClass']
+                ),
+            ]),
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                ],
+            ]
         );
-    }
-
-    public function testQualityProfileBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
-    {
-        $legacyOnlyErrors = [
-            'test_file.php' => [
-                '[3]: missing property type for voku\tests\SimpleClass->$foo',
-            ],
-        ];
-        $diagnostics = new DiagnosticCollection([
-            new Diagnostic(
-                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
-                'test_file.php',
-                10,
-                ['display_name' => 'voku\tests\OldClass']
-            ),
-        ]);
-        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            QualityProfileBuilder::fromErrorsAndDiagnostics(
-                $analysisResult->toLegacyErrors(),
-                $diagnostics
-            )->toArray(),
+            QualityProfile::fromErrors($analysisResult->toLegacyErrors()),
             QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
         );
     }
 
-    public function testQualityProfileFacadeFromAnalysisResultMatchesErrorsAndDiagnostics(): void
+    public function testQualityProfileBuilderFromAnalysisResultMatchesLegacyProjection(): void
     {
         $legacyOnlyErrors = [
             'test_file.php' => [
@@ -245,31 +220,50 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            QualityProfile::fromErrorsAndDiagnostics($analysisResult->toLegacyErrors(), $diagnostics),
+            QualityProfileBuilder::fromErrors($analysisResult->toLegacyErrors())->toArray(),
+            QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+    }
+
+    public function testQualityProfileFacadeFromAnalysisResultMatchesLegacyProjection(): void
+    {
+        $legacyOnlyErrors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
+
+        static::assertSame(
+            QualityProfile::fromErrors($analysisResult->toLegacyErrors()),
             QualityProfile::fromAnalysisResult($analysisResult)
         );
     }
 
     public function testQualityProfileBaselineSuppressionWorksWithDeprecatedMethodDiagnostics(): void
     {
-        $errors = [
-            'test_file.php' => [
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()',
-            ],
-        ];
-        $diagnostics = new DiagnosticCollection([
-            new Diagnostic(
-                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
-                'test_file.php',
-                10,
-                ['display_name' => 'voku\tests\OldClass->oldMethod()']
-            ),
-        ]);
-        $baseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                    'test_file.php',
+                    10,
+                    ['display_name' => 'voku\tests\OldClass->oldMethod()']
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
 
-        $profile = QualityProfileBuilder::fromErrorsAndDiagnostics(
-            $errors,
-            $diagnostics,
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
             BaselineReader::fromArray($baseline)->fingerprints()
         )->toArray();
 
@@ -283,20 +277,20 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         $message = '/tmp/parser.php:370 | Syntax error, unexpected \'{\', expecting T_VARIABLE'
             . "\n"
             . '/tmp/parser.php on line 2';
-        $errors = ['' => [$message]];
-        $diagnostics = new DiagnosticCollection([
-            new Diagnostic(
-                DiagnosticId::PARSER_SYNTAX_ERROR,
-                '',
-                null,
-                ['legacy_message' => $message]
-            ),
-        ]);
-        $baseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::PARSER_SYNTAX_ERROR,
+                    '',
+                    null,
+                    ['legacy_message' => $message]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
 
-        $profile = QualityProfileBuilder::fromErrorsAndDiagnostics(
-            $errors,
-            $diagnostics,
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
             BaselineReader::fromArray($baseline)->fingerprints()
         )->toArray();
 
@@ -325,25 +319,26 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertArrayNotHasKey('message', $baseline['findings'][0]);
     }
 
-    public function testBaselineBuilderProducesCompactSchemaWithDiagnostics(): void
+    public function testBaselineBuilderProducesCompactSchemaFromAnalysisResult(): void
     {
-        $errors = [
-            'test_file.php' => [
-                '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
-            ],
-        ];
-        $diagnostics = new DiagnosticCollection([
-            new Diagnostic(
-                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
-                'test_file.php',
-                10,
-                ['display_name' => 'voku\tests\OldClass']
-            ),
-        ]);
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                    'test_file.php',
+                    10,
+                    ['display_name' => 'voku\tests\OldClass']
+                ),
+            ]),
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                ],
+            ]
+        );
 
-        $legacyBaseline = BaselineBuilder::fromErrors($errors)->toArray();
-        $typedBaseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+        $legacyBaseline = BaselineBuilder::fromErrors($analysisResult->toLegacyErrors())->toArray();
+        $typedBaseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
 
         static::assertSame($legacyBaseline['schema_version'], $typedBaseline['schema_version']);
         static::assertSame($legacyBaseline['tool'], $typedBaseline['tool']);
@@ -351,7 +346,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         static::assertSame($legacyBaseline['findings'], $typedBaseline['findings']);
     }
 
-    public function testBaselineBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
+    public function testBaselineBuilderFromAnalysisResultMatchesLegacyProjection(): void
     {
         $legacyOnlyErrors = [
             'test_file.php' => [
@@ -369,7 +364,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            BaselineBuilder::fromErrorsAndDiagnostics($analysisResult->toLegacyErrors(), $diagnostics)->toArray(),
+            BaselineBuilder::fromErrors($analysisResult->toLegacyErrors())->toArray(),
             BaselineBuilder::fromAnalysisResult($analysisResult)->toArray()
         );
     }
@@ -397,10 +392,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
             BaselineFlow::generateFromAnalysisResult($baselineFile, $analysisResult);
 
             $generatedBaseline = \json_decode((string) \file_get_contents($baselineFile), true);
-            $expectedBaseline = BaselineBuilder::fromErrorsAndDiagnostics(
-                $analysisResult->toLegacyErrors(),
-                $diagnostics
-            )->toArray();
+            $expectedBaseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
 
             static::assertIsArray($generatedBaseline);
             static::assertSame($expectedBaseline['schema_version'], $generatedBaseline['schema_version'] ?? null);

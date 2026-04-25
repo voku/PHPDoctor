@@ -5,8 +5,6 @@ declare(strict_types=1);
 namespace voku\PHPDoctor\Profile;
 
 use voku\PHPDoctor\Analysis\AnalysisResult;
-use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
-use voku\PHPDoctor\Diagnostic\DiagnosticToFindingMapper;
 use voku\PHPDoctor\Finding\Finding;
 
 final class QualityProfileBuilder
@@ -18,23 +16,6 @@ final class QualityProfileBuilder
     public static function fromErrors(array $errors, array $baselineFingerprints = []): QualityProfile
     {
         return self::fromFindings(self::findingsFromErrors($errors), $baselineFingerprints);
-    }
-
-    /**
-     * @param array<string, list<string>> $errors
-     * @param string[]                    $baselineFingerprints
-     *
-     * Transitional compatibility path for callers that still pass legacy errors plus diagnostics.
-     */
-    public static function fromErrorsAndDiagnostics(
-        array $errors,
-        DiagnosticCollection $diagnostics,
-        array $baselineFingerprints = []
-    ): QualityProfile {
-        return self::fromFindings(
-            DiagnosticToFindingMapper::mapAll($errors, $diagnostics),
-            $baselineFingerprints
-        );
     }
 
     /**

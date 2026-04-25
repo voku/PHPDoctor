@@ -126,82 +126,6 @@ final class PhpCodeChecker
         array $pathExcludeRegex = [],
         array $fileExtensions = ['.php']
     ): AnalysisResult {
-        $analysisResult = self::checkPhpFilesWithDiagnostics(
-            $path,
-            $access,
-            $skipAmbiguousTypesAsError,
-            $skipDeprecatedFunctions,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipParseErrorsAsError,
-            $autoloaderProjectPaths,
-            $pathExcludeRegex,
-            $fileExtensions
-        );
-
-        return new AnalysisResult(
-            $analysisResult['diagnostics'],
-            self::legacyOnlyErrors($analysisResult['errors'], $analysisResult['diagnostics'])
-        );
-    }
-
-    /**
-     * @param string   $code
-     * @param string[] $access
-     * @param bool     $skipAmbiguousTypesAsError
-     * @param bool     $skipDeprecatedMethods
-     * @param bool     $skipFunctionsWithLeadingUnderscore
-     * @param bool     $skipParseErrorsAsError
-     *
-     * @return array{
-     *     errors: array<string, list<string>>,
-     *     diagnostics: DiagnosticCollection
-     * }
-     */
-    public static function checkFromStringWithDiagnostics(
-        string $code,
-        array $access = ['public', 'protected', 'private'],
-        bool $skipAmbiguousTypesAsError = false,
-        bool $skipDeprecatedMethods = false,
-        bool $skipFunctionsWithLeadingUnderscore = false,
-        bool $skipParseErrorsAsError = true
-    ): array {
-        return self::checkPhpFilesWithDiagnostics(
-            $code,
-            $access,
-            $skipAmbiguousTypesAsError,
-            $skipDeprecatedMethods,
-            $skipFunctionsWithLeadingUnderscore,
-            $skipParseErrorsAsError
-        );
-    }
-
-    /**
-     * @param string|string[] $path
-     * @param bool            $skipAmbiguousTypesAsError
-     * @param string[]        $access
-     * @param bool            $skipDeprecatedFunctions
-     * @param bool            $skipFunctionsWithLeadingUnderscore
-     * @param bool            $skipParseErrorsAsError
-     * @param string[]        $autoloaderProjectPaths
-     * @param string[]        $pathExcludeRegex
-     * @param string[]        $fileExtensions
-     *
-     * @return array{
-     *     errors: array<string, list<string>>,
-     *     diagnostics: DiagnosticCollection
-     * }
-     */
-    public static function checkPhpFilesWithDiagnostics(
-        $path,
-        array $access = ['public', 'protected', 'private'],
-        bool $skipAmbiguousTypesAsError = false,
-        bool $skipDeprecatedFunctions = false,
-        bool $skipFunctionsWithLeadingUnderscore = false,
-        bool $skipParseErrorsAsError = true,
-        array $autoloaderProjectPaths = [],
-        array $pathExcludeRegex = [],
-        array $fileExtensions = ['.php']
-    ): array {
         // init
         /** @var array<string, array<int, string>> $errors */
         $errors = [];
@@ -266,10 +190,10 @@ final class PhpCodeChecker
         }
         /** @var array<string, list<string>> $errors */
 
-        return [
-            'errors' => $errors,
-            'diagnostics' => $diagnostics,
-        ];
+        return new AnalysisResult(
+            $diagnostics,
+            self::legacyOnlyErrors($errors, $diagnostics)
+        );
     }
 
     /**
