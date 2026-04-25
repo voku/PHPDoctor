@@ -96,7 +96,8 @@ final class CheckClasses
                 $access,
                 $skipMethodsWithLeadingUnderscore,
                 $skipAmbiguousTypesAsError,
-                $error
+                $error,
+                $diagnostics
             );
 
             $error = self::checkMethods(
@@ -966,6 +967,7 @@ final class CheckClasses
      * @param bool                                     $skipMethodsWithLeadingUnderscore
      * @param bool                                     $skipAmbiguousTypesAsError
      * @param string[][]                               $error
+     * @param \voku\PHPDoctor\Diagnostic\DiagnosticCollection $diagnostics
      *
      * @return string[][]
      */
@@ -974,7 +976,8 @@ final class CheckClasses
         array                                    $access,
         bool                                     $skipMethodsWithLeadingUnderscore,
         bool                                     $skipAmbiguousTypesAsError,
-        array                                    $error
+        array                                    $error,
+        DiagnosticCollection                     &$diagnostics
     ): array
     {
         // INFO: ignore "missing type for Exception"
@@ -1045,7 +1048,20 @@ final class CheckClasses
                     );
                 }
             } else {
-                $error[$class->file ?? ''][] = '[' . ($class->line ?? '?') . ']: missing property type for ' . ($class->name ?? '?') . '->$' . $propertyName;
+                $className = $class->name ?? '?';
+                $diagnostics = $diagnostics->with(
+                    new Diagnostic(
+                        DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE,
+                        $class->file ?? '',
+                        $class->line ?? null,
+                        [
+                            'display_name' => $className,
+                            'property_name' => $propertyName,
+                            'declaring_class' => $className,
+                            'symbol' => $className . '->$' . $propertyName,
+                        ]
+                    )
+                );
             }
         }
 
