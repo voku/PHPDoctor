@@ -396,6 +396,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
         static::assertCount(1, $diagnostics);
         static::assertSame('deprecated_attribute_missing_phpdoc_tag', $diagnostics[0]->id());
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
         static::assertSame(
             [
                 '' => [

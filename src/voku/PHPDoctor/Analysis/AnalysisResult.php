@@ -45,37 +45,15 @@ final class AnalysisResult
      */
     public function findings(): array
     {
-        $diagnosticFindings = [];
-        foreach ($this->diagnostics->all() as $diagnostic) {
-            $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
-            $diagnosticFindings[$diagnostic->file()][$message][] = DiagnosticToFindingMapper::map($diagnostic);
-        }
-
         $findings = [];
-        foreach ($this->toLegacyErrors() as $file => $messages) {
+        foreach ($this->legacyOnlyErrors() as $file => $messages) {
             foreach ($messages as $message) {
-                if (isset($diagnosticFindings[$file][$message][0])) {
-                    /** @var Finding $finding */
-                    $finding = \array_shift($diagnosticFindings[$file][$message]);
-                    $findings[] = $finding;
-
-                    if ($diagnosticFindings[$file][$message] === []) {
-                        unset($diagnosticFindings[$file][$message]);
-                    }
-
-                    continue;
-                }
-
                 $findings[] = Finding::fromMessage((string) $file, $message);
             }
         }
 
-        foreach ($diagnosticFindings as $findingsByMessage) {
-            foreach ($findingsByMessage as $findingsForMessage) {
-                foreach ($findingsForMessage as $finding) {
-                    $findings[] = $finding;
-                }
-            }
+        foreach ($this->diagnostics->all() as $diagnostic) {
+            $findings[] = DiagnosticToFindingMapper::map($diagnostic);
         }
 
         return $findings;
