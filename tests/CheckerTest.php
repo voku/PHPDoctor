@@ -878,7 +878,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 '' => [
-                    '[6]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)
@@ -903,7 +903,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 '' => [
-                    '[6]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()',
                 ],
             ],
             $analysisResult->toLegacyErrors()
@@ -912,7 +912,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 Finding::fromMessage(
                     '',
-                    '[6]: missing return type for voku\tests\ambiguousPhpDocReturnType()'
+                    '[7]: missing return type for voku\tests\ambiguousPhpDocReturnType()'
                 )->toArray(),
             ],
             \array_map(
@@ -941,7 +941,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 '' => [
-                    '[8]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)
@@ -967,7 +967,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         static::assertSame(
             [
                 '' => [
-                    '[8]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
                 ],
             ],
             $analysisResult->toLegacyErrors()
@@ -976,7 +976,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 Finding::fromMessage(
                     '',
-                    '[8]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()'
+                    '[9]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()'
                 )->toArray(),
             ],
             \array_map(
