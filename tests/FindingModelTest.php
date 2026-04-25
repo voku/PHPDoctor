@@ -257,6 +257,34 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testWrongPhpDocParameterTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::WRONG_PHPDOC_PARAMETER_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->wrongPhpDocParameterType()',
+                'function_or_method_name' => 'wrongPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter_phpdoc_wrong',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'string',
+                'native_type' => 'int',
+                'symbol' => 'voku\tests\SimpleClass->wrongPhpDocParameterType() | parameter:value',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: wrong parameter type "string" in phpdoc from voku\tests\SimpleClass->wrongPhpDocParameterType()  | parameter:value'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';

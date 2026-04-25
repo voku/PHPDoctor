@@ -1030,6 +1030,22 @@ final class CheckClasses
                     );
                     $error = $parameterCheckResult['errors'];
                     $diagnostics = $parameterCheckResult['diagnostics'];
+
+                    $parameterCheckResult = CheckPhpDocType::migrateWrongParameterErrorsToDiagnostics(
+                        $error,
+                        $diagnostics,
+                        $methodInfo['file'] ?? '',
+                        $methodInfo['line'] ?? null,
+                        $displayName,
+                        $methodName,
+                        $paramName,
+                        'method_parameter_phpdoc_wrong',
+                        $parameterPosition,
+                        $declaringClassName,
+                        $paramTypesNormalized['type']
+                    );
+                    $error = $parameterCheckResult['errors'];
+                    $diagnostics = $parameterCheckResult['diagnostics'];
                 }
             } else {
                 $declaringClassName = $class->name ?? '?';

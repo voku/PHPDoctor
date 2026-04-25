@@ -16,6 +16,7 @@ final class DiagnosticToLegacyMessageMapper
             DiagnosticId::MISSING_PHPDOC_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type "' . self::missingType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic) . ' | parameter:' . self::parameterName($diagnostic),
             DiagnosticId::MISSING_PHPDOC_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing return type "' . self::missingType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic),
             DiagnosticId::PARSER_SYNTAX_ERROR => self::legacyMessage($diagnostic),
+            DiagnosticId::WRONG_PHPDOC_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: wrong parameter type "' . self::phpdocType($diagnostic) . '" in phpdoc from ' . self::displayName($diagnostic) . '  | parameter:' . self::parameterName($diagnostic),
             default => throw new \InvalidArgumentException('Unsupported diagnostic id "' . $diagnostic->id() . '".'),
         };
     }
@@ -53,5 +54,12 @@ final class DiagnosticToLegacyMessageMapper
         $propertyName = $diagnostic->evidence()['property_name'] ?? '?';
 
         return \is_string($propertyName) ? $propertyName : '?';
+    }
+
+    private static function phpdocType(Diagnostic $diagnostic): string
+    {
+        $phpdocType = $diagnostic->evidence()['phpdoc_type'] ?? '?';
+
+        return \is_string($phpdocType) ? $phpdocType : '?';
     }
 }

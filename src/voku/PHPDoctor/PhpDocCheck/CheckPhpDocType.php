@@ -433,6 +433,90 @@ final class CheckPhpDocType
      *     diagnostics: DiagnosticCollection
      * }
      */
+    public static function migrateWrongParameterErrorsToDiagnostics(
+        array $errors,
+        DiagnosticCollection $diagnostics,
+        string $file,
+        ?int $line,
+        string $displayName,
+        string $functionOrMethodName,
+        string $parameterName,
+        string $kind,
+        int $parameterPosition,
+        ?string $declaringClass = null,
+        ?string $nativeType = null
+    ): array {
+        /** @var array<int, string>|null $messages */
+        $messages = $errors[$file] ?? null;
+        if (!\is_array($messages)) {
+            return [
+                'errors' => $errors,
+                'diagnostics' => $diagnostics,
+            ];
+        }
+
+        $pattern = '/^\[(\d+|\?)\]: wrong parameter type "(.+)" in phpdoc from '
+            . \preg_quote($displayName, '/')
+            . '  \| parameter:'
+            . \preg_quote($parameterName, '/')
+            . '$/';
+
+        $remainingMessages = [];
+        foreach ($messages as $message) {
+            if (\preg_match($pattern, $message, $matches) !== 1) {
+                $remainingMessages[] = $message;
+
+                continue;
+            }
+
+            $diagnosticEvidence = [];
+            if ($declaringClass !== null) {
+                $diagnosticEvidence['declaring_class'] = $declaringClass;
+            }
+            if ($nativeType !== null && $nativeType !== '') {
+                $diagnosticEvidence['native_type'] = $nativeType;
+            }
+
+            $diagnosticEvidence += [
+                'display_name' => $displayName,
+                'function_or_method_name' => $functionOrMethodName,
+                'parameter_name' => $parameterName,
+                'kind' => $kind,
+                'parameter_position' => $parameterPosition,
+                'phpdoc_type' => $matches[2],
+                'symbol' => $displayName . ' | parameter:' . $parameterName,
+            ];
+
+            $diagnostics = $diagnostics->with(
+                new Diagnostic(
+                    DiagnosticId::WRONG_PHPDOC_PARAMETER_TYPE,
+                    $file,
+                    $matches[1] !== '?' ? (int) $matches[1] : $line,
+                    $diagnosticEvidence
+                )
+            );
+        }
+
+        if ($remainingMessages === []) {
+            unset($errors[$file]);
+        } else {
+            $errors[$file] = $remainingMessages;
+        }
+
+        return [
+            'errors' => $errors,
+            'diagnostics' => $diagnostics,
+        ];
+    }
+
+    /**
+     * @param array<string, array<int, string>> $errors
+     *
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
+     */
     public static function migrateMissingReturnErrorsToDiagnostics(
         array $errors,
         DiagnosticCollection $diagnostics,

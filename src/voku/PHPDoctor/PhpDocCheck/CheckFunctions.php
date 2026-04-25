@@ -311,6 +311,22 @@ final class CheckFunctions
                     );
                     $error = $parameterCheckResult['errors'];
                     $diagnostics = $parameterCheckResult['diagnostics'];
+
+                    $parameterCheckResult = CheckPhpDocType::migrateWrongParameterErrorsToDiagnostics(
+                        $error,
+                        $diagnostics,
+                        $functionInfo['file'] ?? '',
+                        $functionInfo['line'] ?? null,
+                        $displayName,
+                        $functionName,
+                        $paramName,
+                        'function_parameter_phpdoc_wrong',
+                        $parameterPosition,
+                        null,
+                        $paramTypesNormalized['type']
+                    );
+                    $error = $parameterCheckResult['errors'];
+                    $diagnostics = $parameterCheckResult['diagnostics'];
                 }
             } else {
                 $displayName = $functionName . '()';

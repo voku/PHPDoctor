@@ -844,6 +844,120 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsWrongFunctionPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string|int $value
+         * @return string
+         */
+        function wrongPhpDocParameterType(string $value): string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('wrong_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'native_type' => 'string',
+                'display_name' => 'voku\tests\wrongPhpDocParameterType()',
+                'function_or_method_name' => 'voku\tests\wrongPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'function_parameter_phpdoc_wrong',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'int',
+                'symbol' => 'voku\tests\wrongPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: wrong parameter type "int" in phpdoc from voku\tests\wrongPhpDocParameterType()  | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[8]: wrong parameter type "int" in phpdoc from voku\tests\wrongPhpDocParameterType()  | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
+    public function testAnalyseStringReturnsWrongMethodPhpDocParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            /**
+             * @param string|int $value
+             * @return string
+             */
+            public function wrongPhpDocParameterType(string $value): string
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('wrong_phpdoc_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'native_type' => 'string',
+                'display_name' => 'voku\tests\SimpleClass->wrongPhpDocParameterType()',
+                'function_or_method_name' => 'wrongPhpDocParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter_phpdoc_wrong',
+                'parameter_position' => 0,
+                'phpdoc_type' => 'int',
+                'symbol' => 'voku\tests\SimpleClass->wrongPhpDocParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[10]: wrong parameter type "int" in phpdoc from voku\tests\SimpleClass->wrongPhpDocParameterType()  | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+        static::assertSame(
+            [
+                Finding::fromMessage(
+                    '',
+                    '[10]: wrong parameter type "int" in phpdoc from voku\tests\SimpleClass->wrongPhpDocParameterType()  | parameter:value'
+                )->toArray(),
+            ],
+            \array_map(
+                static fn (Finding $finding): array => $finding->toArray(),
+                $analysisResult->findings()
+            )
+        );
+    }
+
     public function testAnalyseStringReturnsMissingFunctionPhpDocReturnTypeDiagnostics(): void
     {
         $code = '<?php
@@ -1096,6 +1210,30 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[8]: missing parameter type "null" in phpdoc from voku\tests\missingPhpDocParameterType() | parameter:value',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForWrongPhpDocParameterType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        /**
+         * @param string|int $value
+         * @return string
+         */
+        function wrongPhpDocParameterType(string $value): string
+        {
+            return $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[8]: wrong parameter type "int" in phpdoc from voku\tests\wrongPhpDocParameterType()  | parameter:value',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)
