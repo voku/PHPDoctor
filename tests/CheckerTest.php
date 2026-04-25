@@ -3075,6 +3075,61 @@ PHP
         static::assertSame(0, $exitCode);
     }
 
+    public function testCommandExecuteLoadsBootstrapAutoloadFileBeforeParser(): void
+    {
+        $directoryMarker = \tempnam(\sys_get_temp_dir(), 'phpdoctor-autoload-');
+        static::assertIsString($directoryMarker);
+        \unlink($directoryMarker);
+        $directory = $directoryMarker;
+        \mkdir($directory);
+        \mkdir($directory . '/vendor');
+        $bootstrapHelper = $directory . '/bootstrap-helper.php';
+        $vendorAutoload = $directory . '/vendor/autoload.php';
+        $bootstrapFile = $directory . '/phpstan-bootstrap.php';
+
+        \file_put_contents($bootstrapHelper, '<?php return true;' . "\n");
+        \file_put_contents($vendorAutoload, '<?php return true;' . "\n");
+        \file_put_contents(
+            $bootstrapFile,
+            <<<'PHP'
+<?php
+
+foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+    if (($frame['file'] ?? '') !== '' && str_ends_with($frame['file'], 'PhpCodeParser.php')) {
+        throw new RuntimeException('bootstrap loaded from parser');
+    }
+}
+
+require_once __DIR__ . '/bootstrap-helper.php';
+require_once __DIR__ . '/vendor/autoload.php';
+PHP
+        );
+
+        try {
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--autoload-file' => $bootstrapFile,
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+        } finally {
+            foreach ([$bootstrapFile, $bootstrapHelper, $vendorAutoload] as $file) {
+                if (\is_file($file)) {
+                    \unlink($file);
+                }
+            }
+            if (\is_dir($directory . '/vendor')) {
+                \rmdir($directory . '/vendor');
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
     public function testCommandExecuteWithPathExcludeRegex(): void
     {
         $tester = $this->buildCommandTester();
