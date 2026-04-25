@@ -28,26 +28,22 @@ final class DiagnosticMappingTest extends \PHPUnit\Framework\TestCase
 
     /**
      * @dataProvider diagnosticMappingCases
-     *
-     * @param array{
-     *     diagnostic: Diagnostic,
-     *     legacy_message: string,
-     *     category: string
-     * } $case
      */
-    public function testDiagnosticMappingsStayCompatible(array $case): void
+    public function testDiagnosticMappingsStayCompatible(
+        Diagnostic $diagnostic,
+        string $legacyMessage,
+        string $category
+    ): void
     {
-        $diagnostic = $case['diagnostic'];
-        $legacyMessage = $case['legacy_message'];
         $finding = DiagnosticToFindingMapper::map($diagnostic);
 
         static::assertSame($legacyMessage, DiagnosticToLegacyMessageMapper::map($diagnostic));
-        static::assertSame($case['category'], $finding->category()->value());
+        static::assertSame($category, $finding->category()->value());
         static::assertSame(
             [
                 'file' => $diagnostic->file(),
                 'line' => $diagnostic->line(),
-                'category' => $case['category'],
+                'category' => $category,
                 'message' => $legacyMessage,
                 'fingerprint' => FindingFingerprint::fromDetails(
                     $diagnostic->file(),
