@@ -2534,7 +2534,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
 
         static::assertSame(1, $exitCode);
         static::assertStringContainsString('::error file=', $tester->getDisplay());
-        static::assertStringContainsString('missing property type for voku\tests\Dummy8::$lall', $tester->getDisplay());
+        static::assertStringContainsString('missing parameter type for voku\tests\Dummy8->foo_broken()', $tester->getDisplay());
         static::assertStringContainsString('(missing_native_type)', $tester->getDisplay());
     }
 
