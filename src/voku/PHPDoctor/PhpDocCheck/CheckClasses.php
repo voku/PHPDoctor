@@ -242,13 +242,16 @@ final class CheckClasses
                 $error
             );
 
-            $error = self::checkParameter(
+            $parameterCheckResult = self::checkParameter(
                 $methodInfo,
                 $skipAmbiguousTypesAsError,
                 $class,
                 $methodName,
-                $error
+                $error,
+                $diagnostics
             );
+            $error = $parameterCheckResult['errors'];
+            $diagnostics = $parameterCheckResult['diagnostics'];
 
             if (
                 $methodInfo['returnPhpDocRaw']
@@ -541,7 +544,10 @@ final class CheckClasses
      * @param \voku\SimplePhpParser\Parsers\Helper\ParserContainer $phpInfo
      * @param string[][]                               $error
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
      *
      * @phpstan-param array{
      *     line: null|int,
@@ -939,9 +945,12 @@ final class CheckClasses
         bool $skipAmbiguousTypesAsError,
         \voku\SimplePhpParser\Model\PHPClass|\voku\SimplePhpParser\Model\PHPTrait|\voku\SimplePhpParser\Model\PHPInterface|\voku\SimplePhpParser\Model\PHPEnum $class,
         string $methodName,
-        array $error
+        array $error,
+        DiagnosticCollection $diagnostics
     ): array
     {
+        $parameterPosition = 0;
+
         foreach ($methodInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
@@ -989,11 +998,34 @@ final class CheckClasses
                     );
                 }
             } else {
-                $error[$methodInfo['file'] ?? ''][] = '[' . ($methodInfo['line'] ?? '?') . ']: missing parameter type for ' . ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '() | parameter:' . $paramName;
+                $declaringClassName = $class->name ?? '?';
+                $displayName = $declaringClassName . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()';
+                $diagnostics = $diagnostics->with(
+                    new Diagnostic(
+                        DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
+                        $methodInfo['file'] ?? '',
+                        $methodInfo['line'] ?? null,
+                        [
+                            'declaring_class' => $declaringClassName,
+                            'display_name' => $displayName,
+                            'function_or_method_name' => $methodName,
+                            'parameter_name' => $paramName,
+                            'kind' => 'method_parameter',
+                            'parameter_position' => $parameterPosition,
+                            'symbol' => $displayName . ' | parameter:' . $paramName,
+                        ]
+                    )
+                );
             }
+
+            ++$parameterPosition;
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 
     /**

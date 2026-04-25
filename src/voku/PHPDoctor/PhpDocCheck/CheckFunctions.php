@@ -95,12 +95,15 @@ final class CheckFunctions
                 $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: ' . str_replace("\n", ' ', $functionInfo['error']);
             }
 
-            $error = self::checkParameter(
+            $parameterCheckResult = self::checkParameter(
                 $functionInfo,
                 $skipAmbiguousTypesAsError,
                 $functionName,
-                $error
+                $error,
+                $diagnostics
             );
+            $error = $parameterCheckResult['errors'];
+            $diagnostics = $parameterCheckResult['diagnostics'];
 
             if (
                 $functionInfo['returnPhpDocRaw']
@@ -191,7 +194,10 @@ final class CheckFunctions
      * @param string     $functionName
      * @param string[][] $error
      *
-     * @return string[][]
+     * @return array{
+     *     errors: array<string, array<int, string>>,
+     *     diagnostics: DiagnosticCollection
+     * }
      *
      * @phpstan-param array{
      *     fullDescription: string,
@@ -225,8 +231,11 @@ final class CheckFunctions
         array $functionInfo,
         bool $skipAmbiguousTypesAsError,
         string $functionName,
-        array $error
+        array $error,
+        DiagnosticCollection $diagnostics
     ): array {
+        $parameterPosition = 0;
+
         foreach ($functionInfo['paramsTypes'] as $paramName => $paramTypes) {
             // reset
             $typeFound = false;
@@ -274,10 +283,31 @@ final class CheckFunctions
                     );
                 }
             } else {
-                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: missing parameter type for ' . $functionName . '() | parameter:' . $paramName;
+                $displayName = $functionName . '()';
+                $diagnostics = $diagnostics->with(
+                    new Diagnostic(
+                        DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
+                        $functionInfo['file'] ?? '',
+                        $functionInfo['line'] ?? null,
+                        [
+                            'display_name' => $displayName,
+                            'function_or_method_name' => $functionName,
+                            'parameter_name' => $paramName,
+                            'kind' => 'function_parameter',
+                            'parameter_position' => $parameterPosition,
+                            'symbol' => $displayName . ' | parameter:' . $paramName,
+                        ]
+                    )
+                );
             }
+
+            ++$parameterPosition;
         }
 
-        return $error;
+        /** @var array<string, array<int, string>> $error */
+        return [
+            'errors' => $error,
+            'diagnostics' => $diagnostics,
+        ];
     }
 }

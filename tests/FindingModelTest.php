@@ -155,6 +155,32 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testMissingNativeParameterTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingParameterType()',
+                'function_or_method_name' => 'missingParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter',
+                'parameter_position' => 0,
+                'symbol' => 'voku\tests\SimpleClass->missingParameterType() | parameter:value',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: missing parameter type for voku\tests\SimpleClass->missingParameterType() | parameter:value'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testMissingNativeReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
     {
         $diagnostic = new Diagnostic(
@@ -359,6 +385,38 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                         'property_name' => 'foo',
                         'declaring_class' => 'voku\tests\SimpleClass',
                         'symbol' => 'voku\tests\SimpleClass->$foo',
+                    ]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
+
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithMissingNativeParameterTypeDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE,
+                    'test_file.php',
+                    8,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'display_name' => 'voku\tests\SimpleClass->missingParameterType()',
+                        'function_or_method_name' => 'missingParameterType',
+                        'parameter_name' => 'value',
+                        'kind' => 'method_parameter',
+                        'parameter_position' => 0,
+                        'symbol' => 'voku\tests\SimpleClass->missingParameterType() | parameter:value',
                     ]
                 ),
             ])

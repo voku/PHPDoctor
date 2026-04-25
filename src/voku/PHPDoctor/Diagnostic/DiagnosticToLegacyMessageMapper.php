@@ -10,6 +10,7 @@ final class DiagnosticToLegacyMessageMapper
     {
         return match ($diagnostic->id()) {
             DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG => '[' . ($diagnostic->line() ?? '?') . ']: missing @deprecated tag in phpdoc from ' . self::displayName($diagnostic),
+            DiagnosticId::MISSING_NATIVE_PARAMETER_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing parameter type for ' . self::displayName($diagnostic) . ' | parameter:' . self::parameterName($diagnostic),
             DiagnosticId::MISSING_NATIVE_PROPERTY_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing property type for ' . self::displayName($diagnostic) . '->$' . self::propertyName($diagnostic),
             DiagnosticId::MISSING_NATIVE_RETURN_TYPE => '[' . ($diagnostic->line() ?? '?') . ']: missing return type for ' . self::displayName($diagnostic),
             DiagnosticId::PARSER_SYNTAX_ERROR => self::legacyMessage($diagnostic),
@@ -29,6 +30,13 @@ final class DiagnosticToLegacyMessageMapper
         $legacyMessage = $diagnostic->evidence()['legacy_message'] ?? '';
 
         return \is_string($legacyMessage) ? $legacyMessage : '';
+    }
+
+    private static function parameterName(Diagnostic $diagnostic): string
+    {
+        $parameterName = $diagnostic->evidence()['parameter_name'] ?? '?';
+
+        return \is_string($parameterName) ? $parameterName : '?';
     }
 
     private static function propertyName(Diagnostic $diagnostic): string
