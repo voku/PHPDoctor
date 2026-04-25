@@ -51,18 +51,16 @@ final class ComposerAutoloaderLoaderTest extends \PHPUnit\Framework\TestCase
             $directory = \sys_get_temp_dir() . '/phpdoctor-composer-autoload-' . \bin2hex(\random_bytes(8));
         } while (\file_exists($directory));
 
-        static::assertTrue(\mkdir($directory));
-        static::assertTrue(\mkdir($directory . '/vendor'));
-        static::assertTrue(\mkdir($directory . '/vendor/composer'));
+        static::assertTrue(\mkdir($directory . '/vendor/composer', 0777, true));
 
-        \file_put_contents(
+        static::assertNotFalse(\file_put_contents(
             $directory . '/vendor/composer/autoload_real.php',
             "<?php\n\nclass $autoloadClass\n{\n}\n"
-        );
-        \file_put_contents(
+        ));
+        static::assertNotFalse(\file_put_contents(
             $directory . '/vendor/autoload.php',
             "<?php\n\n\$GLOBALS['phpdoctor_autoload_loader_included'] = (\$GLOBALS['phpdoctor_autoload_loader_included'] ?? 0) + 1;\nreturn true;\n"
-        );
+        ));
 
         return [$directory, $directory . '/vendor/autoload.php'];
     }

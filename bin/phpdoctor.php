@@ -26,7 +26,7 @@ use Symfony\Component\Console\Application;
         if (\is_file($autoloadRealPath)) {
             $autoloadRealContents = \file_get_contents($autoloadRealPath);
             if (\is_string($autoloadRealContents)) {
-                \preg_match('/class\s+(ComposerAutoloaderInit[a-f0-9]+)\b/i', $autoloadRealContents, $matches);
+                \preg_match('/class\s+(ComposerAutoloaderInit[a-f0-9]+)\b/', $autoloadRealContents, $matches);
                 if (isset($matches[1]) && \class_exists($matches[1], false)) {
                     return;
                 }
