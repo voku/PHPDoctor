@@ -232,6 +232,31 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testMissingPhpDocReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::MISSING_PHPDOC_RETURN_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
+                'function_or_method_name' => 'missingPhpDocReturnType',
+                'kind' => 'method_return_phpdoc',
+                'missing_type' => 'null',
+                'symbol' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: missing return type "null" in phpdoc from voku\tests\SimpleClass->missingPhpDocReturnType()'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
@@ -507,6 +532,39 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                         'missing_type' => 'null',
                         'parameter_position' => 0,
                         'symbol' => 'voku\tests\SimpleClass->missingPhpDocParameterType() | parameter:value',
+                    ]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
+
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame(1, $profile['summary']['missing_phpdoc_type']);
+        static::assertSame(0, $profile['new_summary']['missing_phpdoc_type']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithMissingPhpDocReturnTypeDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::MISSING_PHPDOC_RETURN_TYPE,
+                    'test_file.php',
+                    8,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'display_name' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
+                        'function_or_method_name' => 'missingPhpDocReturnType',
+                        'kind' => 'method_return_phpdoc',
+                        'missing_type' => 'null',
+                        'symbol' => 'voku\tests\SimpleClass->missingPhpDocReturnType()',
                     ]
                 ),
             ])
