@@ -16,7 +16,7 @@ use Symfony\Component\Console\Output\OutputInterface;
 use voku\PHPDoctor\Baseline\BaselineFlow;
 use voku\PHPDoctor\Baseline\BaselineFlowException;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
-use voku\PHPDoctor\Profile\QualityProfileBuilder;
+use voku\PHPDoctor\QualityProfile;
 use voku\PHPDoctor\Report\JsonProfileReporter;
 use voku\PHPDoctor\Report\TextProfileReporter;
 
@@ -235,7 +235,7 @@ final class PhpDoctorCommand extends Command
         );
         $errors = $analysisResult->toLegacyErrors();
 
-        $qualityProfile = QualityProfileBuilder::fromAnalysisResult($analysisResult, $baselineFingerprints)->toArray();
+        $qualityProfile = QualityProfile::fromAnalysisResult($analysisResult, $baselineFingerprints);
 
         if ($generateBaseline) {
             if ($baselineFile === '') {

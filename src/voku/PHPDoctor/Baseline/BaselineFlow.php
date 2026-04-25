@@ -52,6 +52,8 @@ final class BaselineFlow
     /**
      * @param array<string, list<string>> $errors
      *
+     * Transitional compatibility path for callers that still pass legacy errors plus diagnostics.
+     *
      * @throws BaselineFlowException
      */
     public static function generateFromErrorsAndDiagnostics(

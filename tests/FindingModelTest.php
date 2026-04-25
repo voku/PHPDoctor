@@ -225,6 +225,30 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testQualityProfileFacadeFromAnalysisResultMatchesErrorsAndDiagnostics(): void
+    {
+        $errors = [
+            'test_file.php' => [
+                '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+            ],
+        ];
+        $diagnostics = new DiagnosticCollection([
+            new Diagnostic(
+                DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+                'test_file.php',
+                10,
+                ['display_name' => 'voku\tests\OldClass']
+            ),
+        ]);
+        $analysisResult = new AnalysisResult($diagnostics, $errors);
+
+        static::assertSame(
+            QualityProfile::fromErrorsAndDiagnostics($errors, $diagnostics),
+            QualityProfile::fromAnalysisResult($analysisResult)
+        );
+    }
+
     public function testQualityProfileBaselineSuppressionWorksWithDeprecatedMethodDiagnostics(): void
     {
         $errors = [

@@ -21,6 +21,8 @@ final class BaselineBuilder
 
     /**
      * @param array<string, list<string>> $errors
+     *
+     * Transitional compatibility path for callers that still pass legacy errors plus diagnostics.
      */
     public static function fromErrorsAndDiagnostics(array $errors, DiagnosticCollection $diagnostics): Baseline
     {
