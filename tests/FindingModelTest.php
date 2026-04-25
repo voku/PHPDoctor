@@ -208,6 +208,31 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAmbiguousPhpDocReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::AMBIGUOUS_PHPDOC_RETURN_TYPE,
+            'test_file.php',
+            8,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                'function_or_method_name' => 'ambiguousPhpDocReturnType',
+                'kind' => 'method_return_phpdoc_ambiguous',
+                'phpdoc_type' => 'array',
+                'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[8]: missing return type for voku\tests\SimpleClass->ambiguousPhpDocReturnType()'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testMissingNativeReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
     {
         $diagnostic = new Diagnostic(
@@ -762,6 +787,36 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                         'parameter_position' => 0,
                         'phpdoc_type' => 'array',
                         'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocParameterType() | parameter:value',
+                    ]
+                ),
+            ])
+        );
+
+        static::assertSame(
+            QualityProfile::fromErrors($analysisResult->toLegacyErrors()),
+            QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+        static::assertSame(
+            BaselineBuilder::fromErrors($analysisResult->toLegacyErrors())->toArray(),
+            BaselineBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
+    }
+
+    public function testQualityProfileAndBaselineStayCompatibleForAmbiguousPhpDocReturnDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::AMBIGUOUS_PHPDOC_RETURN_TYPE,
+                    'test_file.php',
+                    8,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'display_name' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
+                        'function_or_method_name' => 'ambiguousPhpDocReturnType',
+                        'kind' => 'method_return_phpdoc_ambiguous',
+                        'phpdoc_type' => 'array',
+                        'symbol' => 'voku\tests\SimpleClass->ambiguousPhpDocReturnType()',
                     ]
                 ),
             ])

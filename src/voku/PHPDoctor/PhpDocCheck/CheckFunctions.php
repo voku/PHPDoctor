@@ -171,8 +171,16 @@ final class CheckFunctions
                     }
                 } else {
                 $displayName = $functionName . '()';
+                $diagnostic = CheckPhpDocType::ambiguousReturnDiagnostic(
+                    $functionInfo['file'] ?? '',
+                    $functionInfo['line'] ?? null,
+                    $displayName,
+                    $functionName,
+                    $functionInfo['returnTypes'],
+                    'function_return_phpdoc_ambiguous'
+                );
                 $diagnostics = $diagnostics->with(
-                    new Diagnostic(
+                    $diagnostic ?? new Diagnostic(
                         DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
                         $functionInfo['file'] ?? '',
                         $functionInfo['line'] ?? null,
