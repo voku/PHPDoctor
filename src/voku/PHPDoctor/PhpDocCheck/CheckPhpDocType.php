@@ -346,6 +346,60 @@ final class CheckPhpDocType
     }
 
     /**
+     * @param array{
+     *     type: null|string,
+     *     typeFromPhpDoc: null|string,
+     *     typeFromPhpDocExtended: null|string,
+     *     typeFromPhpDocSimple: null|string,
+     *     typeFromPhpDocMaybeWithComment: null|string,
+     *     typeFromDefaultValue?: null|string
+     * } $parameterTypes
+     */
+    public static function ambiguousParameterDiagnostic(
+        string $file,
+        ?int $line,
+        string $displayName,
+        string $functionOrMethodName,
+        string $parameterName,
+        array $parameterTypes,
+        string $kind,
+        int $parameterPosition,
+        ?string $declaringClass = null
+    ): ?Diagnostic {
+        $phpdocType = self::ambiguousPhpDocType($parameterTypes);
+        if ($phpdocType === null) {
+            return null;
+        }
+
+        $diagnosticEvidence = [];
+        if ($declaringClass !== null) {
+            $diagnosticEvidence['declaring_class'] = $declaringClass;
+        }
+
+        $nativeType = $parameterTypes['type'] ?? null;
+        if (\is_string($nativeType) && $nativeType !== '') {
+            $diagnosticEvidence['native_type'] = $nativeType;
+        }
+
+        $diagnosticEvidence += [
+            'display_name' => $displayName,
+            'function_or_method_name' => $functionOrMethodName,
+            'parameter_name' => $parameterName,
+            'kind' => $kind,
+            'parameter_position' => $parameterPosition,
+            'phpdoc_type' => $phpdocType,
+            'symbol' => $displayName . ' | parameter:' . $parameterName,
+        ];
+
+        return new Diagnostic(
+            DiagnosticId::AMBIGUOUS_PHPDOC_PARAMETER_TYPE,
+            $file,
+            $line,
+            $diagnosticEvidence
+        );
+    }
+
+    /**
      * @param array<string, array<int, string>> $errors
      *
      * @return array<int, string>|null
@@ -370,6 +424,34 @@ final class CheckPhpDocType
 
         /** @var array<int, string> $matches */
         return $matches;
+    }
+
+    /**
+     * @param array{
+     *     type: null|string,
+     *     typeFromPhpDoc: null|string,
+     *     typeFromPhpDocExtended: null|string,
+     *     typeFromPhpDocSimple: null|string,
+     *     typeFromPhpDocMaybeWithComment: null|string,
+     *     typeFromDefaultValue?: null|string
+     * } $parameterTypes
+     */
+    private static function ambiguousPhpDocType(array $parameterTypes): ?string
+    {
+        foreach (['typeFromPhpDocExtended', 'typeFromPhpDoc', 'typeFromPhpDocSimple'] as $key) {
+            $phpdocType = $parameterTypes[$key] ?? null;
+            if (!\is_string($phpdocType) || $phpdocType === '') {
+                continue;
+            }
+
+            if ($phpdocType === 'mixed' || $phpdocType === 'array') {
+                return $phpdocType;
+            }
+
+            return null;
+        }
+
+        return null;
     }
 
     /**
