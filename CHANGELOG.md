@@ -8,7 +8,10 @@
 - internal: introduce `AnalysisResult` as the internal analysis contract
 - internal: move native type, PHPDoc, deprecated documentation, and parse-error checks onto typed diagnostics
 - internal: add stable diagnostic mapping coverage for legacy-message and finding-category compatibility
-- bc: preserve the existing CLI text output and JSON profile shape, introduce baseline schema v1 for generated baselines, and keep legacy checker wrappers available for compatibility
+- bc: preserve the existing CLI text output
+- bc: preserve the existing JSON profile shape
+- bc: introduce baseline schema v1 for generated baselines
+- bc: keep legacy checker wrappers available for compatibility
 
 ### 0.7.0 (2026-04-24)
 
