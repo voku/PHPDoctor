@@ -3077,7 +3077,10 @@ PHP
 
     public function testBootstrapAutoloadFileLoadsBeforeParser(): void
     {
-        $directory = \sys_get_temp_dir() . '/phpdoctor-autoload-' . \bin2hex(\random_bytes(8));
+        $directory = '';
+        do {
+            $directory = \sys_get_temp_dir() . '/phpdoctor-autoload-' . \bin2hex(\random_bytes(8));
+        } while (\file_exists($directory));
         $bootstrapHelper = $directory . '/bootstrap-helper.php';
         $vendorAutoload = $directory . '/vendor/autoload.php';
         $bootstrapFile = $directory . '/phpstan-bootstrap.php';
@@ -3093,7 +3096,8 @@ PHP
 <?php
 
 foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
-    if (!empty($frame['file']) && str_ends_with($frame['file'], 'PhpCodeParser.php')) {
+    $frameFile = str_replace('\\', '/', (string) ($frame['file'] ?? ''));
+    if ($frameFile !== '' && str_ends_with($frameFile, '/voku/SimplePhpParser/Parsers/PhpCodeParser.php')) {
         throw new RuntimeException('bootstrap loaded from parser');
     }
 }
