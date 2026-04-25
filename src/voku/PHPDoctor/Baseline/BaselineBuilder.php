@@ -31,10 +31,7 @@ final class BaselineBuilder
 
     public static function fromAnalysisResult(AnalysisResult $analysisResult): Baseline
     {
-        return self::fromErrorsAndDiagnostics(
-            $analysisResult->toLegacyErrors(),
-            $analysisResult->diagnostics()
-        );
+        return self::fromFindings($analysisResult->findings());
     }
 
     /**

@@ -40,15 +40,23 @@ final class AnalysisResultTest extends \PHPUnit\Framework\TestCase
                 ['display_name' => 'voku\tests\OldClass']
             ),
         ]);
-        $legacyErrors = [
+        $legacyOnlyErrors = [
             'test_file.php' => [
                 '[3]: missing property type for voku\tests\OldClass->$value',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
             ],
         ];
 
-        $analysisResult = new AnalysisResult($diagnostics, $legacyErrors);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
-        static::assertSame($legacyErrors, $analysisResult->toLegacyErrors());
+        static::assertSame($legacyOnlyErrors, $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\OldClass->$value',
+                    '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
     }
 }

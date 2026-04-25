@@ -44,11 +44,7 @@ final class QualityProfileBuilder
         AnalysisResult $analysisResult,
         array $baselineFingerprints = []
     ): QualityProfile {
-        return self::fromErrorsAndDiagnostics(
-            $analysisResult->toLegacyErrors(),
-            $analysisResult->diagnostics(),
-            $baselineFingerprints
-        );
+        return self::fromFindings($analysisResult->findings(), $baselineFingerprints);
     }
 
     /**

@@ -138,7 +138,10 @@ final class PhpCodeChecker
             $fileExtensions
         );
 
-        return new AnalysisResult($analysisResult['diagnostics'], $analysisResult['errors']);
+        return new AnalysisResult(
+            $analysisResult['diagnostics'],
+            self::legacyOnlyErrors($analysisResult['errors'], $analysisResult['diagnostics'])
+        );
     }
 
     /**
@@ -293,5 +296,42 @@ final class PhpCodeChecker
         }
 
         return $diagnostics;
+    }
+
+    /**
+     * @param array<string, list<string>> $errors
+     *
+     * @return array<string, list<string>>
+     */
+    private static function legacyOnlyErrors(array $errors, DiagnosticCollection $diagnostics): array
+    {
+        $diagnosticMessages = [];
+        foreach ($diagnostics->all() as $diagnostic) {
+            $message = DiagnosticToLegacyMessageMapper::map($diagnostic);
+            $diagnosticMessages[$diagnostic->file()][$message] = ($diagnosticMessages[$diagnostic->file()][$message] ?? 0) + 1;
+        }
+
+        foreach ($errors as $file => $messages) {
+            $legacyOnlyMessages = [];
+            foreach ($messages as $message) {
+                if (($diagnosticMessages[$file][$message] ?? 0) > 0) {
+                    --$diagnosticMessages[$file][$message];
+
+                    continue;
+                }
+
+                $legacyOnlyMessages[] = $message;
+            }
+
+            if ($legacyOnlyMessages === []) {
+                unset($errors[$file]);
+
+                continue;
+            }
+
+            $errors[$file] = $legacyOnlyMessages;
+        }
+
+        return $errors;
     }
 }

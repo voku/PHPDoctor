@@ -203,10 +203,9 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
 
     public function testQualityProfileBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
     {
-        $errors = [
+        $legacyOnlyErrors = [
             'test_file.php' => [
                 '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
             ],
         ];
         $diagnostics = new DiagnosticCollection([
@@ -217,20 +216,22 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 ['display_name' => 'voku\tests\OldClass']
             ),
         ]);
-        $analysisResult = new AnalysisResult($diagnostics, $errors);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            QualityProfileBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray(),
+            QualityProfileBuilder::fromErrorsAndDiagnostics(
+                $analysisResult->toLegacyErrors(),
+                $diagnostics
+            )->toArray(),
             QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
         );
     }
 
     public function testQualityProfileFacadeFromAnalysisResultMatchesErrorsAndDiagnostics(): void
     {
-        $errors = [
+        $legacyOnlyErrors = [
             'test_file.php' => [
                 '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
             ],
         ];
         $diagnostics = new DiagnosticCollection([
@@ -241,10 +242,10 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 ['display_name' => 'voku\tests\OldClass']
             ),
         ]);
-        $analysisResult = new AnalysisResult($diagnostics, $errors);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            QualityProfile::fromErrorsAndDiagnostics($errors, $diagnostics),
+            QualityProfile::fromErrorsAndDiagnostics($analysisResult->toLegacyErrors(), $diagnostics),
             QualityProfile::fromAnalysisResult($analysisResult)
         );
     }
@@ -352,10 +353,9 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
 
     public function testBaselineBuilderFromAnalysisResultMatchesErrorsAndDiagnostics(): void
     {
-        $errors = [
+        $legacyOnlyErrors = [
             'test_file.php' => [
                 '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
             ],
         ];
         $diagnostics = new DiagnosticCollection([
@@ -366,20 +366,19 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 ['display_name' => 'voku\tests\OldClass']
             ),
         ]);
-        $analysisResult = new AnalysisResult($diagnostics, $errors);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
 
         static::assertSame(
-            BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray(),
+            BaselineBuilder::fromErrorsAndDiagnostics($analysisResult->toLegacyErrors(), $diagnostics)->toArray(),
             BaselineBuilder::fromAnalysisResult($analysisResult)->toArray()
         );
     }
 
     public function testBaselineFlowGenerateFromAnalysisResultWritesSameCompactSchema(): void
     {
-        $errors = [
+        $legacyOnlyErrors = [
             'test_file.php' => [
                 '[3]: missing property type for voku\tests\SimpleClass->$foo',
-                '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass',
             ],
         ];
         $diagnostics = new DiagnosticCollection([
@@ -390,7 +389,7 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 ['display_name' => 'voku\tests\OldClass']
             ),
         ]);
-        $analysisResult = new AnalysisResult($diagnostics, $errors);
+        $analysisResult = new AnalysisResult($diagnostics, $legacyOnlyErrors);
         $baselineFile = \tempnam(\sys_get_temp_dir(), 'phpdoctor-analysis-result-baseline-');
         static::assertIsString($baselineFile);
 
@@ -398,7 +397,10 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
             BaselineFlow::generateFromAnalysisResult($baselineFile, $analysisResult);
 
             $generatedBaseline = \json_decode((string) \file_get_contents($baselineFile), true);
-            $expectedBaseline = BaselineBuilder::fromErrorsAndDiagnostics($errors, $diagnostics)->toArray();
+            $expectedBaseline = BaselineBuilder::fromErrorsAndDiagnostics(
+                $analysisResult->toLegacyErrors(),
+                $diagnostics
+            )->toArray();
 
             static::assertIsArray($generatedBaseline);
             static::assertSame($expectedBaseline['schema_version'], $generatedBaseline['schema_version'] ?? null);
@@ -410,6 +412,30 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                 \unlink($baselineFile);
             }
         }
+    }
+
+    public function testAnalysisResultFindingsAvoidDuplicateTypedDiagnosticProjection(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::DEPRECATED_ATTRIBUTE_MISSING_PHPDOC_TAG,
+            'test_file.php',
+            10,
+            ['display_name' => 'voku\tests\OldClass']
+        );
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([$diagnostic]),
+            [
+                'test_file.php' => [
+                    '[3]: missing property type for voku\tests\SimpleClass->$foo',
+                ],
+            ]
+        );
+
+        static::assertCount(2, $analysisResult->findings());
+        static::assertSame(
+            QualityProfile::fromErrors($analysisResult->toLegacyErrors()),
+            QualityProfileBuilder::fromAnalysisResult($analysisResult)->toArray()
+        );
     }
 
     public function testBaselineReaderSupportsLegacyAndSchemaVersionOneFormats(): void
