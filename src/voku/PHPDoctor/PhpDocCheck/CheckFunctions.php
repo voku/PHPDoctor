@@ -5,6 +5,7 @@ namespace voku\PHPDoctor\PhpDocCheck;
 use voku\PHPDoctor\Diagnostic\Diagnostic;
 use voku\PHPDoctor\Diagnostic\DiagnosticCollection;
 use voku\PHPDoctor\Diagnostic\DiagnosticId;
+use voku\PHPDoctor\Diagnostic\DiagnosticToLegacyMessageMapper;
 
 /**
  * @internal
@@ -29,7 +30,7 @@ final class CheckFunctions
         bool $skipParseErrorsAsError,
         array $error
     ): array {
-        return self::checkFunctionsWithDiagnostics(
+        $result = self::checkFunctionsWithDiagnostics(
             $phpInfo,
             $skipDeprecatedFunctions,
             $skipFunctionsWithLeadingUnderscore,
@@ -37,7 +38,21 @@ final class CheckFunctions
             $skipParseErrorsAsError,
             $error,
             DiagnosticCollection::empty()
-        )['errors'];
+        );
+
+        foreach ($result['diagnostics']->all() as $diagnostic) {
+            $result['errors'][$diagnostic->file()][] = DiagnosticToLegacyMessageMapper::map($diagnostic);
+        }
+
+        /** @var array<string, array<int, string>> $resultErrors */
+        $resultErrors = $result['errors'];
+
+        foreach ($resultErrors as &$errorsInner) {
+            \natsort($errorsInner);
+            $errorsInner = \array_values($errorsInner);
+        }
+
+        return $resultErrors;
     }
 
     /**
@@ -124,7 +139,20 @@ final class CheckFunctions
                     );
                 }
             } else {
-                $error[$functionInfo['file'] ?? ''][] = '[' . ($functionInfo['line'] ?? '?') . ']: missing return type for ' . $functionName . '()';
+                $displayName = $functionName . '()';
+                $diagnostics = $diagnostics->with(
+                    new Diagnostic(
+                        DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
+                        $functionInfo['file'] ?? '',
+                        $functionInfo['line'] ?? null,
+                        [
+                            'display_name' => $displayName,
+                            'function_or_method_name' => $functionName,
+                            'kind' => 'function',
+                            'symbol' => $displayName,
+                        ]
+                    )
+                );
             }
         }
 

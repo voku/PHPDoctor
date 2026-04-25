@@ -520,6 +520,80 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsMissingFunctionReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        function missingReturnType(string $value)
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_native_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\missingReturnType()',
+                'function_or_method_name' => 'voku\tests\missingReturnType',
+                'kind' => 'function',
+                'symbol' => 'voku\tests\missingReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing return type for voku\tests\missingReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
+    public function testAnalyseStringReturnsMissingMethodReturnTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            public function missingReturnType(string $value)
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_native_return_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingReturnType()',
+                'function_or_method_name' => 'missingReturnType',
+                'kind' => 'method',
+                'symbol' => 'voku\tests\SimpleClass->missingReturnType()',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[6]: missing return type for voku\tests\SimpleClass->missingReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
     public function testCheckFromStringStillReturnsLegacyArray(): void
     {
         $code = '<?php
@@ -537,6 +611,26 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
                 ],
             ],
             PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForMissingNativeReturnType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        function missingReturnType(string $value)
+        {
+            return $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing return type for voku\tests\missingReturnType()',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
         );
     }
 

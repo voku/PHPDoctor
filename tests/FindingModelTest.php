@@ -155,6 +155,30 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testMissingNativeReturnTypeDiagnosticToFindingPreservesLegacyCompatibility(): void
+    {
+        $diagnostic = new Diagnostic(
+            DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
+            'test_file.php',
+            6,
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingReturnType()',
+                'function_or_method_name' => 'missingReturnType',
+                'kind' => 'method',
+                'symbol' => 'voku\tests\SimpleClass->missingReturnType()',
+            ]
+        );
+
+        static::assertSame(
+            Finding::fromMessage(
+                'test_file.php',
+                '[6]: missing return type for voku\tests\SimpleClass->missingReturnType()'
+            )->toArray(),
+            DiagnosticToFindingMapper::map($diagnostic)->toArray()
+        );
+    }
+
     public function testAnalysisResultFindingsAvoidDuplicateDeprecatedMethodFinding(): void
     {
         $message = '[10]: missing @deprecated tag in phpdoc from voku\tests\OldClass->oldMethod()';
@@ -335,6 +359,36 @@ final class FindingModelTest extends \PHPUnit\Framework\TestCase
                         'property_name' => 'foo',
                         'declaring_class' => 'voku\tests\SimpleClass',
                         'symbol' => 'voku\tests\SimpleClass->$foo',
+                    ]
+                ),
+            ])
+        );
+        $baseline = BaselineBuilder::fromAnalysisResult($analysisResult)->toArray();
+
+        $profile = QualityProfileBuilder::fromAnalysisResult(
+            $analysisResult,
+            BaselineReader::fromArray($baseline)->fingerprints()
+        )->toArray();
+
+        static::assertSame(1, $profile['total_error_count']);
+        static::assertSame(0, $profile['new_error_count']);
+        static::assertSame([], $profile['new_findings']);
+    }
+
+    public function testQualityProfileBaselineSuppressionWorksWithMissingNativeReturnTypeDiagnostics(): void
+    {
+        $analysisResult = new AnalysisResult(
+            new DiagnosticCollection([
+                new Diagnostic(
+                    DiagnosticId::MISSING_NATIVE_RETURN_TYPE,
+                    'test_file.php',
+                    6,
+                    [
+                        'declaring_class' => 'voku\tests\SimpleClass',
+                        'display_name' => 'voku\tests\SimpleClass->missingReturnType()',
+                        'function_or_method_name' => 'missingReturnType',
+                        'kind' => 'method',
+                        'symbol' => 'voku\tests\SimpleClass->missingReturnType()',
                     ]
                 ),
             ])
