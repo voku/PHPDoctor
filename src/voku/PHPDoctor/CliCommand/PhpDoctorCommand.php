@@ -169,7 +169,10 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            $this->autoloaderProjectPaths[] = $autoloadRealPath;
+            /** @noinspection PhpIncludeInspection */
+            require_once $autoloadRealPath;
+
+            $this->autoloaderProjectPaths[] = \dirname($autoloadRealPath);
         }
 
         $access = $input->getOption('access');

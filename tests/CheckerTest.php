@@ -3075,6 +3075,62 @@ PHP
         static::assertSame(0, $exitCode);
     }
 
+    public function testBootstrapAutoloadFileLoadsBeforeParser(): void
+    {
+        $directory = '';
+        do {
+            $directory = \sys_get_temp_dir() . '/phpdoctor-autoload-' . \bin2hex(\random_bytes(8));
+        } while (\file_exists($directory));
+        $bootstrapHelper = $directory . '/bootstrap-helper.php';
+        $vendorAutoload = $directory . '/vendor/autoload.php';
+        $bootstrapFile = $directory . '/phpstan-bootstrap.php';
+
+        try {
+            static::assertTrue(\mkdir($directory));
+            static::assertTrue(\mkdir($directory . '/vendor'));
+            \file_put_contents($bootstrapHelper, '<?php return true;' . "\n");
+            \file_put_contents($vendorAutoload, '<?php return true;' . "\n");
+            \file_put_contents(
+                $bootstrapFile,
+                <<<'PHP'
+<?php
+
+foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $frame) {
+    $frameFile = str_replace('\\', '/', (string) ($frame['file'] ?? ''));
+    if ($frameFile !== '' && str_ends_with($frameFile, '/voku/SimplePhpParser/Parsers/PhpCodeParser.php')) {
+        throw new RuntimeException('bootstrap loaded from parser');
+    }
+}
+
+require_once __DIR__ . '/bootstrap-helper.php';
+require_once __DIR__ . '/vendor/autoload.php';
+PHP
+            );
+
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--autoload-file' => $bootstrapFile,
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+        } finally {
+            foreach ([$bootstrapFile, $bootstrapHelper, $vendorAutoload] as $file) {
+                if (\is_file($file)) {
+                    \unlink($file);
+                }
+            }
+            if (\is_dir($directory . '/vendor')) {
+                \rmdir($directory . '/vendor');
+            }
+            if (\is_dir($directory)) {
+                \rmdir($directory);
+            }
+        }
+    }
+
     public function testCommandExecuteWithPathExcludeRegex(): void
     {
         $tester = $this->buildCommandTester();
