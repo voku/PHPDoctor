@@ -462,28 +462,6 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
-    public function testParseErrorDiagnosticsPreserveLegacyOutput(): void
-    {
-        $code = "<?php\nfunction broken( {\n";
-        $analysisResult = PhpCodeChecker::analyseString(
-            $code,
-            ['public', 'protected', 'private'],
-            false,
-            false,
-            false,
-            false
-        );
-        $errors = $analysisResult->toLegacyErrors()[''] ?? [];
-        $diagnostics = $analysisResult->diagnostics()->all();
-
-        static::assertCount(1, $errors);
-        static::assertStringContainsString('Syntax error, unexpected', $errors[0]);
-        static::assertStringContainsString('T_VARIABLE', $errors[0]);
-        static::assertCount(1, $diagnostics);
-        static::assertSame('parser_syntax_error', $diagnostics[0]->id());
-        static::assertSame(['legacy_message' => $errors[0]], $diagnostics[0]->evidence());
-    }
-
     public function testAnalyseStringReturnsParseErrorDiagnostics(): void
     {
         $code = "<?php\nfunction broken( {\n";
