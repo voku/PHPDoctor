@@ -555,6 +555,43 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         );
     }
 
+    public function testAnalyseStringReturnsMissingFunctionParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        function missingParameterType($value): string
+        {
+            return $value;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_native_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'display_name' => 'voku\tests\missingParameterType()',
+                'function_or_method_name' => 'voku\tests\missingParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'function_parameter',
+                'parameter_position' => 0,
+                'symbol' => 'voku\tests\missingParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing parameter type for voku\tests\missingParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
     public function testAnalyseStringReturnsMissingMethodReturnTypeDiagnostics(): void
     {
         $code = '<?php
@@ -588,6 +625,106 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[6]: missing return type for voku\tests\SimpleClass->missingReturnType()',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
+    public function testAnalyseStringReturnsMissingMethodParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        class SimpleClass
+        {
+            public function missingParameterType($value): string
+            {
+                return $value;
+            }
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(1, $diagnostics);
+        static::assertSame('missing_native_parameter_type', $diagnostics[0]->id());
+        static::assertSame(
+            [
+                'declaring_class' => 'voku\tests\SimpleClass',
+                'display_name' => 'voku\tests\SimpleClass->missingParameterType()',
+                'function_or_method_name' => 'missingParameterType',
+                'parameter_name' => 'value',
+                'kind' => 'method_parameter',
+                'parameter_position' => 0,
+                'symbol' => 'voku\tests\SimpleClass->missingParameterType() | parameter:value',
+            ],
+            $diagnostics[0]->evidence()
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[6]: missing parameter type for voku\tests\SimpleClass->missingParameterType() | parameter:value',
+                ],
+            ],
+            $analysisResult->toLegacyErrors()
+        );
+    }
+
+    public function testAnalyseStringReturnsMultipleMissingParameterTypeDiagnostics(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        function missingParameters($first, $second): string
+        {
+            return (string) $first . $second;
+        }';
+
+        $analysisResult = PhpCodeChecker::analyseString($code);
+        $diagnostics = $analysisResult->diagnostics()->all();
+
+        static::assertCount(2, $diagnostics);
+        static::assertSame(
+            [
+                [
+                    'id' => 'missing_native_parameter_type',
+                    'evidence' => [
+                        'display_name' => 'voku\tests\missingParameters()',
+                        'function_or_method_name' => 'voku\tests\missingParameters',
+                        'parameter_name' => 'first',
+                        'kind' => 'function_parameter',
+                        'parameter_position' => 0,
+                        'symbol' => 'voku\tests\missingParameters() | parameter:first',
+                    ],
+                ],
+                [
+                    'id' => 'missing_native_parameter_type',
+                    'evidence' => [
+                        'display_name' => 'voku\tests\missingParameters()',
+                        'function_or_method_name' => 'voku\tests\missingParameters',
+                        'parameter_name' => 'second',
+                        'kind' => 'function_parameter',
+                        'parameter_position' => 1,
+                        'symbol' => 'voku\tests\missingParameters() | parameter:second',
+                    ],
+                ],
+            ],
+            \array_map(
+                static fn (\voku\PHPDoctor\Diagnostic\Diagnostic $diagnostic): array => [
+                    'id' => $diagnostic->id(),
+                    'evidence' => $diagnostic->evidence(),
+                ],
+                $diagnostics
+            )
+        );
+        static::assertSame([], $analysisResult->legacyOnlyErrors());
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing parameter type for voku\tests\missingParameters() | parameter:first',
+                    '[4]: missing parameter type for voku\tests\missingParameters() | parameter:second',
                 ],
             ],
             $analysisResult->toLegacyErrors()
@@ -628,6 +765,26 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
             [
                 '' => [
                     '[4]: missing return type for voku\tests\missingReturnType()',
+                ],
+            ],
+            PhpCodeChecker::checkFromString($code)
+        );
+    }
+
+    public function testCheckFromStringStillReturnsLegacyArrayForMissingNativeParameterType(): void
+    {
+        $code = '<?php
+        namespace voku\tests;
+
+        function missingParameterType($value): string
+        {
+            return $value;
+        }';
+
+        static::assertSame(
+            [
+                '' => [
+                    '[4]: missing parameter type for voku\tests\missingParameterType() | parameter:value',
                 ],
             ],
             PhpCodeChecker::checkFromString($code)
