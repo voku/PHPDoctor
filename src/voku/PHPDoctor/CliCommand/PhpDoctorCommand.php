@@ -13,6 +13,7 @@ use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use voku\PHPDoctor\Autoload\ComposerAutoloaderLoader;
 use voku\PHPDoctor\Baseline\BaselineFlow;
 use voku\PHPDoctor\Baseline\BaselineFlowException;
 use voku\PHPDoctor\PhpDocCheck\PhpCodeChecker;
@@ -169,8 +170,7 @@ final class PhpDoctorCommand extends Command
                 return 2;
             }
 
-            /** @noinspection PhpIncludeInspection */
-            require_once $autoloadRealPath;
+            ComposerAutoloaderLoader::requireOnceIfNeeded($autoloadRealPath);
 
             $this->autoloaderProjectPaths[] = \dirname($autoloadRealPath);
         }

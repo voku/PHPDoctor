@@ -21,13 +21,28 @@ use Symfony\Component\Console\Application;
     $devOrPharLoader = require_once __DIR__ . '/../vendor/autoload.php';
     $devOrPharLoader->unregister();
 
+    $requireProjectAutoloaderIfNeeded = static function (string $autoloadFile): void {
+        $autoloadRealPath = \dirname($autoloadFile) . '/composer/autoload_real.php';
+        if (\is_file($autoloadRealPath)) {
+            $autoloadRealContents = \file_get_contents($autoloadRealPath);
+            if (\is_string($autoloadRealContents)) {
+                \preg_match('/class\s+(ComposerAutoloaderInit[a-fA-F0-9]+)\b/', $autoloadRealContents, $matches);
+                if (isset($matches[1]) && \class_exists($matches[1], false)) {
+                    return;
+                }
+            }
+        }
+
+        /** @noinspection PhpIncludeInspection */
+        require_once $autoloadFile;
+    };
+
     $autoloaderInWorkingDirectory = getcwd() . '/vendor/autoload.php';
     $autoloaderProjectPaths = [];
     if (is_file($autoloaderInWorkingDirectory)) {
         $autoloaderProjectPaths[] = \dirname($autoloaderInWorkingDirectory, 2);
 
-        /** @noinspection PhpIncludeInspection */
-        require_once $autoloaderInWorkingDirectory;
+        $requireProjectAutoloaderIfNeeded($autoloaderInWorkingDirectory);
     }
 
     $autoloadProjectAutoloaderFile = static function (string $file) use (&$autoloaderProjectPaths): void {
@@ -36,8 +51,7 @@ use Symfony\Component\Console\Application;
             if (is_file($path)) {
                 $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                /** @noinspection PhpIncludeInspection */
-                require_once $path;
+                $requireProjectAutoloaderIfNeeded($path);
             }
         } else {
             $pharPath = \Phar::running(false);
@@ -45,16 +59,14 @@ use Symfony\Component\Console\Application;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    /** @noinspection PhpIncludeInspection */
-                    require_once $path;
+                    $requireProjectAutoloaderIfNeeded($path);
                 }
             } else {
                 $path = \dirname($pharPath) . $file;
                 if (\is_file($path)) {
                     $autoloaderProjectPaths[] = \dirname($path, 2);
 
-                    /** @noinspection PhpIncludeInspection */
-                    require_once $path;
+                    $requireProjectAutoloaderIfNeeded($path);
                 }
             }
         }
