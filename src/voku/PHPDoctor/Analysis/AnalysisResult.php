@@ -92,8 +92,7 @@ final class AnalysisResult
         }
 
         foreach (\array_keys($errors) as $file) {
-            \natsort($errors[$file]);
-            $errors[$file] = \array_values($errors[$file]);
+            \usort($errors[$file], '\strnatcmp');
         }
         /** @var array<string, list<string>> $errors */
 
