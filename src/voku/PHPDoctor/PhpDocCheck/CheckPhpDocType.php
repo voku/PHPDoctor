@@ -346,6 +346,8 @@ final class CheckPhpDocType
     }
 
     /**
+     * @internal
+     *
      * @param array{
      *     type: null|string,
      *     typeFromPhpDoc: null|string,
