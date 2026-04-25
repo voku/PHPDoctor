@@ -2,6 +2,17 @@
 
 ### [Unreleased]
 
+- feat: add type and PHPDoc quality profiling for native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
+- feat: document machine-readable profile output via `--output-format=json` and GitHub Actions annotation output via `--output-format=github`
+- feat: document compact baseline generation and comparison so CI can stay baseline-aware and fail or annotate only on newly introduced findings
+- internal: introduce `AnalysisResult` as the internal analysis contract
+- internal: move native type, PHPDoc, deprecated documentation, and parse-error checks onto typed diagnostics
+- internal: add stable diagnostic mapping coverage for legacy-message and finding-category compatibility
+- bc: preserve the existing CLI text output
+- bc: preserve the existing JSON profile shape
+- bc: introduce baseline schema v1 for generated baselines
+- bc: keep legacy checker wrappers available for compatibility
+
 ### 0.7.0 (2026-04-24)
 
 - feat: detect `#[\Deprecated]` attribute on class constants and properties
