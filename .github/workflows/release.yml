@@ -67,5 +67,6 @@ jobs:
         with:
           tag_name: ${{ steps.release_tag.outputs.tag }}
           files: phpdoctor.phar
-          generate_release_notes: ${{ github.event_name == 'push' }}
+          generate_release_notes: ${{ toJSON(github.event_name == 'push') }}
+          # Allow retry runs for an existing tag to replace the previously uploaded PHAR asset.
           overwrite_files: true
