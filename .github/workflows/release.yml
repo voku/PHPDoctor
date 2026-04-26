@@ -22,11 +22,6 @@ jobs:
       contents: write
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.event_name == 'release' && github.event.release.tag_name || github.ref }}
-
       - name: Resolve release tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
@@ -36,6 +31,11 @@ jobs:
           else
             echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
           fi
+
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ env.RELEASE_TAG }}
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
