@@ -23,19 +23,21 @@ jobs:
 
     steps:
       - name: Resolve release tag
+        id: release_tag
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            echo "RELEASE_TAG=${{ inputs.tag }}" >> "$GITHUB_ENV"
+            tag="${{ inputs.tag }}"
           elif [ "${{ github.event_name }}" = "release" ]; then
-            echo "RELEASE_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+            tag="${{ github.event.release.tag_name }}"
           else
-            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+            tag="${GITHUB_REF_NAME}"
           fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
 
       - name: Checkout
         uses: actions/checkout@v6
         with:
-          ref: ${{ env.RELEASE_TAG }}
+          ref: ${{ steps.release_tag.outputs.tag }}
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -63,7 +65,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
-          tag_name: ${{ env.RELEASE_TAG }}
+          tag_name: ${{ steps.release_tag.outputs.tag }}
           files: phpdoctor.phar
           generate_release_notes: ${{ github.event_name == 'push' }}
           overwrite_files: true
