@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - "*.*.*"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release"
+        required: true
+        type: string
 
 jobs:
   build-phar:
@@ -15,6 +24,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Resolve release tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "RELEASE_TAG=${{ inputs.tag }}" >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            echo "RELEASE_TAG=${{ github.event.release.tag_name }}" >> "$GITHUB_ENV"
+          else
+            echo "RELEASE_TAG=${GITHUB_REF_NAME}" >> "$GITHUB_ENV"
+          fi
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -42,5 +61,7 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ env.RELEASE_TAG }}
           files: phpdoctor.phar
-          generate_release_notes: true
+          generate_release_notes: ${{ github.event_name != 'release' }}
+          overwrite_files: true
