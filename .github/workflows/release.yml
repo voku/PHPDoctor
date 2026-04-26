@@ -65,5 +65,5 @@ jobs:
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: phpdoctor.phar
-          generate_release_notes: ${{ github.event_name != 'release' }}
+          generate_release_notes: ${{ github.event_name == 'push' }}
           overwrite_files: true
