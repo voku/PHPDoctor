@@ -31,9 +31,9 @@ final class CheckPhpDocType
         array  $fileInfo,
         string $name,
         array  $errors,
-        string $className = null,
-        string $paramName = null,
-        string $propertyName = null
+        ?string $className = null,
+        ?string $paramName = null,
+        ?string $propertyName = null
     ): array {
         // init
         $typeFromPhpWithoutNullArray = [];
@@ -191,21 +191,19 @@ final class CheckPhpDocType
                                     ||
                                     \interface_exists($typeFromPhpDocTmp, true)
                                 )
-                                &&
-                                (
-                                    /** @phpstan-ignore-next-line */
-                                    ($typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocTmp))
-                                    &&
-                                    (
-                                        $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpSingle)
-                                        ||
-                                        $typeFromPhpDocReflectionClass->implementsInterface($typeFromPhpSingle)
-                                    )
-                                )
                             ) {
-                                $checked = true;
+                                /** @var class-string $typeFromPhpDocTmp */
+                                $typeFromPhpDocReflectionClass = Utils::createClassReflectionInstance($typeFromPhpDocTmp);
 
-                                break;
+                                if (
+                                    $typeFromPhpDocReflectionClass->isSubclassOf($typeFromPhpSingle)
+                                    ||
+                                    $typeFromPhpDocReflectionClass->implementsInterface($typeFromPhpSingle)
+                                ) {
+                                    $checked = true;
+
+                                    break;
+                                }
                             }
                         }
                     }

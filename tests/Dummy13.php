@@ -15,10 +15,10 @@ class Dummy13
     /**
      * @deprecated use Dummy13::NEW_CONST instead
      */
-    #[\Deprecated(message: 'Use Dummy13::NEW_CONST instead')]
+    #[Deprecated(message: 'Use Dummy13::NEW_CONST instead')]
     const OLD_CONST = 'old';
 
-    #[\Deprecated(message: 'Missing phpdoc @deprecated tag')]
+    #[Deprecated(message: 'Missing phpdoc @deprecated tag')]
     const MISSING_DOC_CONST = 'missing';
 
     const NO_ATTR_CONST = 'none';
@@ -28,10 +28,10 @@ class Dummy13
      *
      * @var string
      */
-    #[\Deprecated(message: 'Use $newProp instead')]
+    #[Deprecated(message: 'Use $newProp instead')]
     public string $oldProp = 'old';
 
-    #[\Deprecated(message: 'Missing phpdoc @deprecated tag')]
+    #[Deprecated(message: 'Missing phpdoc @deprecated tag')]
     public string $missingDocProp = 'missing';
 
     public string $noAttrProp = 'none';

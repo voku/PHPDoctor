@@ -5,6 +5,9 @@
 - feat: add type and PHPDoc quality profiling for native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
 - feat: document machine-readable profile output via `--output-format=json` and GitHub Actions annotation output via `--output-format=github`
 - feat: document compact baseline generation and comparison so CI can stay baseline-aware and fail or annotate only on newly introduced findings
+- test: add focused `BaselineFlow` and `AttributeHelper` coverage for baseline round-trips, invalid baseline JSON, missing baseline directories, and attribute-name matching
+- test: increase line coverage from `94.51%` to `94.83%`
+- fix: make the deprecated-attribute property fixture compatible with PHP `8.5` runtime validation during test execution
 - internal: introduce `AnalysisResult` as the internal analysis contract
 - internal: move native type, PHPDoc, deprecated documentation, and parse-error checks onto typed diagnostics
 - internal: add stable diagnostic mapping coverage for legacy-message and finding-category compatibility

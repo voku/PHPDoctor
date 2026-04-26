@@ -175,7 +175,7 @@ composer install --no-dev --optimize-autoloader
 curl -L https://github.com/box-project/box/releases/latest/download/box.phar -o box.phar
 
 # compile the PHAR
-php box.phar compile --config=box.json.dist
+php -d phar.readonly=0 box.phar compile --config=box.json.dist
 ```
 
 ### Support

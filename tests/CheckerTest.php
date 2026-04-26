@@ -2457,7 +2457,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     private function buildCommandTester(): CommandTester
     {
         $app = new Application();
-        $command = new PhpDoctorCommand([]);
+        $command = new PhpDoctorCommand();
         $app->add($command);
         $app->setDefaultCommand(PhpDoctorCommand::COMMAND_NAME);
 
@@ -3075,6 +3075,58 @@ PHP
         static::assertSame(0, $exitCode);
     }
 
+    public function testCommandExecuteSkipsParserReloadForAlreadyKnownComposerAutoloaderClass(): void
+    {
+        $autoloadClass = 'ComposerAutoloaderInit' . \bin2hex(\random_bytes(16));
+        $fixtureRoot = \sys_get_temp_dir() . '/phpdoctor-autoload-regression-' . \bin2hex(\random_bytes(8));
+        $vendorDir = $fixtureRoot . '/vendor';
+        $composerDir = $vendorDir . '/composer';
+        $autoloadFile = $vendorDir . '/autoload.php';
+        $preloadedClassFile = $fixtureRoot . '/preloaded-autoloader-class.php';
+
+        try {
+            static::assertTrue(\mkdir($composerDir, 0755, true));
+            static::assertNotFalse(\file_put_contents(
+                $composerDir . '/autoload_real.php',
+                "<?php\n\nclass $autoloadClass\n{\n}\n"
+            ));
+            static::assertNotFalse(\file_put_contents(
+                $autoloadFile,
+                "<?php\n\nrequire_once __DIR__ . '/composer/autoload_real.php';\nreturn true;\n"
+            ));
+            static::assertNotFalse(\file_put_contents(
+                $preloadedClassFile,
+                "<?php\n\nclass $autoloadClass\n{\n}\n"
+            ));
+            require_once $preloadedClassFile;
+
+            $tester = $this->buildCommandTester();
+
+            $exitCode = $tester->execute([
+                'path' => [__DIR__ . '/Dummy7.php'],
+                '--autoload-file' => $autoloadFile,
+            ]);
+
+            static::assertSame(0, $exitCode);
+            static::assertStringContainsString('0 errors detected', $tester->getDisplay());
+        } finally {
+            foreach ([
+                $composerDir . '/autoload_real.php',
+                $autoloadFile,
+                $preloadedClassFile,
+            ] as $file) {
+                if (\is_file($file)) {
+                    \unlink($file);
+                }
+            }
+            foreach ([$composerDir, $vendorDir, $fixtureRoot] as $directory) {
+                if (\is_dir($directory)) {
+                    \rmdir($directory);
+                }
+            }
+        }
+    }
+
     public function testBootstrapAutoloadFileLoadsBeforeParser(): void
     {
         $directory = '';
@@ -3142,6 +3194,33 @@ PHP
 
         // All paths excluded → 0 errors
         static::assertSame(0, $exitCode);
+    }
+
+    public function testCommandExecuteWithBarePathExcludeRegex(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy8.php'],
+            '--path-exclude-regex' => '^$',
+        ]);
+
+        static::assertSame(1, $exitCode);
+        static::assertStringContainsString('2 errors detected', $tester->getDisplay());
+        static::assertStringNotContainsString('No ending delimiter', $tester->getDisplay());
+    }
+
+    public function testCommandExecuteWithInvalidPathExcludeRegex(): void
+    {
+        $tester = $this->buildCommandTester();
+
+        $exitCode = $tester->execute([
+            'path' => [__DIR__ . '/Dummy7.php'],
+            '--path-exclude-regex' => 'foo(',
+        ]);
+
+        static::assertSame(2, $exitCode);
+        static::assertStringContainsString('is not a valid regular expression', $tester->getDisplay());
     }
 
     public function testCommandExecuteWithFileExtensions(): void

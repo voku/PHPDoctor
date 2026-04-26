@@ -27,21 +27,6 @@ final class PhpDoctorCommand extends Command
     public const COMMAND_NAME = 'analyse';
     public const ALIASES = ['analyze'];
 
-    /**
-     * @var string[]
-     */
-    private $autoloaderProjectPaths = [];
-
-    /**
-     * @param string[] $autoloaderProjectPaths
-     */
-    public function __construct(array $autoloaderProjectPaths)
-    {
-        parent::__construct();
-
-        $this->autoloaderProjectPaths = $autoloaderProjectPaths;
-    }
-
     public function configure(): void
     {
         $this
@@ -137,15 +122,24 @@ final class PhpDoctorCommand extends Command
 
     public function execute(InputInterface $input, OutputInterface $output): int
     {
-        $pathArray = $input->getArgument('path');
-        if (!$pathArray) {
-            // fallback
+        $pathArgument = $input->getArgument('path');
+        if ($pathArgument === null || $pathArgument === []) {
             $pathArray = ['.'];
+        } elseif (\is_array($pathArgument)) {
+            $pathArray = [];
+            foreach ($pathArgument as $pathItem) {
+                if (!\is_string($pathItem)) {
+                    throw new \LogicException('The "path" argument must contain only strings.');
+                }
+
+                $pathArray[] = $pathItem;
+            }
+        } else {
+            throw new \LogicException('The "path" argument must resolve to an array of strings.');
         }
-        \assert(\is_array($pathArray));
+
         foreach ($pathArray as $pathItem) {
             $realPath = \realpath($pathItem);
-            \assert(\is_string($realPath));
 
             if (!$realPath || !\file_exists($realPath)) {
                 $output->writeln('-------------------------------');
@@ -156,11 +150,9 @@ final class PhpDoctorCommand extends Command
             }
         }
 
-        $autoloadPath = $input->getOption('autoload-file');
-        \assert(\is_string($autoloadPath) || $autoloadPath === null);
-        if ($autoloadPath) {
+        $autoloadPath = self::stringOption($input, 'autoload-file');
+        if ($autoloadPath !== '') {
             $autoloadRealPath = \realpath($autoloadPath);
-            \assert(\is_string($autoloadRealPath));
 
             if (!$autoloadRealPath || !\file_exists($autoloadRealPath)) {
                 $output->writeln('-------------------------------');
@@ -171,30 +163,30 @@ final class PhpDoctorCommand extends Command
             }
 
             ComposerAutoloaderLoader::requireOnceIfNeeded($autoloadRealPath);
-
-            $this->autoloaderProjectPaths[] = \dirname($autoloadRealPath);
         }
 
-        $access = $input->getOption('access');
-        \assert(\is_string($access));
-        $access = (array) \explode('|', $access);
+        $access = self::parsePipeSeparatedList(self::stringOption($input, 'access'));
 
-        $skipAmbiguousTypesAsError = $input->getOption('skip-ambiguous-types-as-error') !== 'false';
-        $skipDeprecatedFunctions = $input->getOption('skip-deprecated-functions') !== 'false';
-        $skipFunctionsWithLeadingUnderscore = $input->getOption('skip-functions-with-leading-underscore') !== 'false';
-        $skipParseErrorsAsError = $input->getOption('skip-parse-errors') !== 'false';
+        $skipAmbiguousTypesAsError = self::stringOption($input, 'skip-ambiguous-types-as-error') !== 'false';
+        $skipDeprecatedFunctions = self::stringOption($input, 'skip-deprecated-functions') !== 'false';
+        $skipFunctionsWithLeadingUnderscore = self::stringOption($input, 'skip-functions-with-leading-underscore') !== 'false';
+        $skipParseErrorsAsError = self::stringOption($input, 'skip-parse-errors') !== 'false';
 
-        $pathExcludeRegex = $input->getOption('path-exclude-regex');
-        \assert(\is_string($pathExcludeRegex));
+        $pathExcludeRegexOption = self::stringOption($input, 'path-exclude-regex');
+        $pathExcludeRegex = self::normalizeRegexOption($pathExcludeRegexOption);
+        if ($pathExcludeRegex === null) {
+            $output->writeln('-------------------------------');
+            $output->writeln('The path-exclude-regex "' . $pathExcludeRegexOption . '" is not a valid regular expression.');
+            $output->writeln('-------------------------------');
 
-        $fileExtensions = $input->getOption('file-extensions');
-        \assert(\is_string($fileExtensions));
-        $fileExtensions = self::parsePipeSeparatedList($fileExtensions);
+            return 2;
+        }
 
-        $profileSummaryEnabled = $input->getOption('profile') !== 'false';
+        $fileExtensions = self::parsePipeSeparatedList(self::stringOption($input, 'file-extensions'));
 
-        $outputFormat = $input->getOption('output-format');
-        \assert(\is_string($outputFormat));
+        $profileSummaryEnabled = self::stringOption($input, 'profile') !== 'false';
+
+        $outputFormat = self::stringOption($input, 'output-format');
         if (!\in_array($outputFormat, ['text', 'json', 'github'], true)) {
             $output->writeln('-------------------------------');
             $output->writeln('The output-format "' . $outputFormat . '" is not supported. Use "text", "json" or "github".');
@@ -203,10 +195,9 @@ final class PhpDoctorCommand extends Command
             return 2;
         }
 
-        $baselineFile = $input->getOption('baseline-file');
-        \assert(\is_string($baselineFile));
+        $baselineFile = self::stringOption($input, 'baseline-file');
 
-        $generateBaseline = $input->getOption('generate-baseline') !== 'false';
+        $generateBaseline = self::stringOption($input, 'generate-baseline') !== 'false';
 
         $baselineFingerprints = [];
         if (!$generateBaseline && $baselineFile !== '') {
@@ -233,8 +224,8 @@ final class PhpDoctorCommand extends Command
             skipDeprecatedFunctions: $skipDeprecatedFunctions,
             skipFunctionsWithLeadingUnderscore: $skipFunctionsWithLeadingUnderscore,
             skipParseErrorsAsError: $skipParseErrorsAsError,
-            autoloaderProjectPaths: $this->autoloaderProjectPaths,
-            pathExcludeRegex: [$pathExcludeRegex],
+            autoloaderProjectPaths: [],
+            pathExcludeRegex: $pathExcludeRegex === '' ? [] : [$pathExcludeRegex],
             fileExtensions: $fileExtensions
         );
         $errors = $analysisResult->toLegacyErrors();
@@ -302,5 +293,49 @@ final class PhpDoctorCommand extends Command
                 static fn (string $item): bool => $item !== ''
             )
         );
+    }
+
+    private static function normalizeRegexOption(string $value): ?string
+    {
+        $value = \trim($value);
+        if ($value === '') {
+            return '';
+        }
+
+        if (self::isValidRegex($value)) {
+            return $value;
+        }
+
+        foreach (['#', '~', '%', '!', ';', '@'] as $delimiter) {
+            if (\strpos($value, $delimiter) !== false) {
+                continue;
+            }
+
+            $wrapped = $delimiter . $value . $delimiter;
+            if (self::isValidRegex($wrapped)) {
+                return $wrapped;
+            }
+        }
+
+        return null;
+    }
+
+    private static function isValidRegex(string $value): bool
+    {
+        return @\preg_match($value, '') !== false;
+    }
+
+    private static function stringOption(InputInterface $input, string $name): string
+    {
+        $value = $input->getOption($name);
+        if (\is_string($value)) {
+            return $value;
+        }
+
+        if ($value === null) {
+            return '';
+        }
+
+        throw new \LogicException('The option "' . $name . '" must resolve to a string.');
     }
 }

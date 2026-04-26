@@ -38,34 +38,25 @@ use Symfony\Component\Console\Application;
     };
 
     $autoloaderInWorkingDirectory = getcwd() . '/vendor/autoload.php';
-    $autoloaderProjectPaths = [];
     if (is_file($autoloaderInWorkingDirectory)) {
-        $autoloaderProjectPaths[] = \dirname($autoloaderInWorkingDirectory, 2);
-
         $requireProjectAutoloaderIfNeeded($autoloaderInWorkingDirectory);
     }
 
-    $autoloadProjectAutoloaderFile = static function (string $file) use (&$autoloaderProjectPaths): void {
+    $autoloadProjectAutoloaderFile = static function (string $file) use ($requireProjectAutoloaderIfNeeded): void {
         $path = \dirname(__DIR__) . $file;
         if (!\extension_loaded('phar')) {
             if (is_file($path)) {
-                $autoloaderProjectPaths[] = \dirname($path, 2);
-
                 $requireProjectAutoloaderIfNeeded($path);
             }
         } else {
             $pharPath = \Phar::running(false);
             if ($pharPath === '') {
                 if (\is_file($path)) {
-                    $autoloaderProjectPaths[] = \dirname($path, 2);
-
                     $requireProjectAutoloaderIfNeeded($path);
                 }
             } else {
                 $path = \dirname($pharPath) . $file;
                 if (\is_file($path)) {
-                    $autoloaderProjectPaths[] = \dirname($path, 2);
-
                     $requireProjectAutoloaderIfNeeded($path);
                 }
             }
@@ -76,12 +67,10 @@ use Symfony\Component\Console\Application;
 
     $devOrPharLoader->register(true);
 
-    $reversedAutoloaderProjectPaths = array_reverse($autoloaderProjectPaths);
-
     $app = new Application('PHPDoctor');
 
     /** @noinspection UnusedFunctionResultInspection */
-    $app->add(new \voku\PHPDoctor\CliCommand\PhpDoctorCommand($reversedAutoloaderProjectPaths));
+    $app->add(new \voku\PHPDoctor\CliCommand\PhpDoctorCommand());
 
     /** @noinspection PhpUnhandledExceptionInspection */
     $app->run();
