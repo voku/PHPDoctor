@@ -1,6 +1,6 @@
 # Changelog
 
-### [Unreleased]
+### 0.8.0 (2026-04-26)
 
 - feat: add type and PHPDoc quality profiling for native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
 - feat: document machine-readable profile output via `--output-format=json` and GitHub Actions annotation output via `--output-format=github`
