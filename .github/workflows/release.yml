@@ -4,6 +4,15 @@ on:
   push:
     tags:
       - "*.*.*"
+  release:
+    types:
+      - published
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to build and release"
+        required: true
+        type: string
 
 jobs:
   build-phar:
@@ -13,8 +22,22 @@ jobs:
       contents: write
 
     steps:
+      - name: Resolve release tag
+        id: release_tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            tag="${{ inputs.tag }}"
+          elif [ "${{ github.event_name }}" = "release" ]; then
+            tag="${{ github.event.release.tag_name }}"
+          else
+            tag="${GITHUB_REF_NAME}"
+          fi
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+
       - name: Checkout
         uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.release_tag.outputs.tag }}
 
       - name: Set up PHP
         uses: shivammathur/setup-php@v2
@@ -42,5 +65,8 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v3
         with:
+          tag_name: ${{ steps.release_tag.outputs.tag }}
           files: phpdoctor.phar
-          generate_release_notes: true
+          generate_release_notes: ${{ toJSON(github.event_name == 'push') }}
+          # Allow retry runs for an existing tag to replace the previously uploaded PHAR asset.
+          overwrite_files: true
