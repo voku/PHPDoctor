@@ -44,6 +44,8 @@ final class CheckPhpDocType
             &&
             $resolvedPhpDocType !== ''
             &&
+            \strpos($resolvedPhpDocType, '\\') !== false
+            &&
             \strpos($resolvedPhpDocType, '<') === false
             &&
             \strpos($resolvedPhpDocType, '{') === false
