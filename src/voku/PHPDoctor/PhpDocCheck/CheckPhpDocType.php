@@ -21,7 +21,7 @@ final class CheckPhpDocType
      * @param string|null                                                                                                                                                                                                                                                                                                                                                                                    $paramName
      * @param string|null                                                                                                                                                                                                                                                                                                                                                                                    $propertyName
      *
-     * @psalm-param array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null}|array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null, typeFromDefaultValue: null|string} $types
+     * @psalm-param array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocResolved?: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null}|array{type: null|string, typeFromPhpDoc: null|string, typeFromPhpDocExtended: null|string, typeFromPhpDocResolved?: null|string, typeFromPhpDocSimple: null|string, typeFromPhpDocMaybeWithComment: string|null, typeFromDefaultValue: null|string} $types
      * @psalm-param array{line: null|int, file: null|string}                                                                                                                                                                                                                                                                                                                                                 $fileInfo
      *
      * @return string[][]
@@ -38,6 +38,20 @@ final class CheckPhpDocType
         // init
         $typeFromPhpWithoutNullArray = [];
         $typeFromPhpDocInput = $types['typeFromPhpDocSimple'];
+        $resolvedPhpDocType = $types['typeFromPhpDocResolved'] ?? null;
+        if (
+            \is_string($resolvedPhpDocType)
+            &&
+            $resolvedPhpDocType !== ''
+            &&
+            \strpos($resolvedPhpDocType, '<') === false
+            &&
+            \strpos($resolvedPhpDocType, '{') === false
+            &&
+            \strpos($resolvedPhpDocType, '(') === false
+        ) {
+            $typeFromPhpDocInput = $resolvedPhpDocType;
+        }
         $typeFromPhpInput = $types['type'];
 
         // native "mixed" always wins
