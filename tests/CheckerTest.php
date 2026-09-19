@@ -1696,6 +1696,43 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
         }
     }
 
+    public function testResolvedPhpDocAliasesAreUsedForTypeChecks(): void
+    {
+        $code = '<?php
+        namespace voku\tests\ResolvedPhpDoc;
+
+        use Vendor\Contracts\Payload as Message;
+
+        /**
+         * @param Message $message
+         * @return Message
+         */
+        function relay(\Vendor\Contracts\Payload $message): \Vendor\Contracts\Payload
+        {
+            return $message;
+        }
+
+        final class Handler
+        {
+            /** @var Message */
+            public \Vendor\Contracts\Payload $payload;
+
+            /**
+             * @param Message $message
+             * @return Message
+             */
+            public function handle(\Vendor\Contracts\Payload $message): \Vendor\Contracts\Payload
+            {
+                return $message;
+            }
+        }';
+
+        static::assertSame(
+            [],
+            \array_filter(PhpCodeChecker::checkFromString($code, ['public'], false, false, false, false))
+        );
+    }
+
     public function testPhp8ModernFeatureSupportSmoke(): void
     {
         $code = '<?php
