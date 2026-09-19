@@ -2495,7 +2495,7 @@ final class CheckerTest extends \PHPUnit\Framework\TestCase
     {
         $app = new Application();
         $command = new PhpDoctorCommand();
-        $app->add($command);
+        $app->addCommands([$command]);
         $app->setDefaultCommand(PhpDoctorCommand::COMMAND_NAME);
 
         return new CommandTester($app->find(PhpDoctorCommand::COMMAND_NAME));
