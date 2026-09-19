@@ -70,7 +70,7 @@ use Symfony\Component\Console\Application;
     $app = new Application('PHPDoctor');
 
     /** @noinspection UnusedFunctionResultInspection */
-    $app->add(new \voku\PHPDoctor\CliCommand\PhpDoctorCommand());
+    $app->addCommands([new \voku\PHPDoctor\CliCommand\PhpDoctorCommand()]);
 
     /** @noinspection PhpUnhandledExceptionInspection */
     $app->run();
