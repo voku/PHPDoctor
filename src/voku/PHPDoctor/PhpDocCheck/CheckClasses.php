@@ -227,6 +227,13 @@ final class CheckClasses
 
             $method = $class->methods[$methodName] ?? null;
             if ($method instanceof \voku\SimplePhpParser\Model\PHPMethod) {
+                foreach ($method->parameters as $parameter) {
+                    if (isset($methodInfo['paramsTypes'][$parameter->name])) {
+                        $methodInfo['paramsTypes'][$parameter->name]['typeFromPhpDocResolved'] = $parameter->typeFromPhpDocResolved;
+                    }
+                }
+                $methodInfo['returnTypes']['typeFromPhpDocResolved'] = $method->returnTypeFromPhpDocResolved;
+
                 $diagnostics = self::checkDeprecatedAttributeOnMethod(
                     $method,
                     ($class->name ?? '?') . ($methodInfo['is_static'] ? '::' : '->') . $methodName . '()',
@@ -387,6 +394,7 @@ final class CheckClasses
      *         type?: null|string,
      *         typeFromPhpDoc?: null|string,
      *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple?: null|string,
      *         typeFromPhpDocMaybeWithComment?: null|string,
      *         typeFromDefaultValue?: null|string
@@ -395,6 +403,7 @@ final class CheckClasses
      *         type: null|string,
      *         typeFromPhpDoc: null|string,
      *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple: null|string,
      *         typeFromPhpDocMaybeWithComment: null|string
      *     },
@@ -448,6 +457,7 @@ final class CheckClasses
      *         type?: null|string,
      *         typeFromPhpDoc?: null|string,
      *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple?: null|string,
      *         typeFromPhpDocMaybeWithComment?: null|string,
      *         typeFromDefaultValue?: null|string
@@ -456,6 +466,7 @@ final class CheckClasses
      *         type: null|string,
      *         typeFromPhpDoc: null|string,
      *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple: null|string,
      *         typeFromPhpDocMaybeWithComment: null|string
      *     },
@@ -513,6 +524,7 @@ final class CheckClasses
      *         type?: null|string,
      *         typeFromPhpDoc?: null|string,
      *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple?: null|string,
      *         typeFromPhpDocMaybeWithComment?: null|string,
      *         typeFromDefaultValue?: null|string
@@ -521,6 +533,7 @@ final class CheckClasses
      *         type: null|string,
      *         typeFromPhpDoc: null|string,
      *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple: null|string,
      *         typeFromPhpDocMaybeWithComment: null|string
      *     },
@@ -972,6 +985,7 @@ final class CheckClasses
      *         type: null|string,
      *         typeFromPhpDoc: null|string,
      *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple: null|string,
      *         typeFromPhpDocMaybeWithComment: null|string
      *     },
@@ -997,6 +1011,7 @@ final class CheckClasses
                 'type' => null,
                 'typeFromPhpDoc' => null,
                 'typeFromPhpDocExtended' => null,
+                'typeFromPhpDocResolved' => null,
                 'typeFromPhpDocSimple' => null,
                 'typeFromPhpDocMaybeWithComment' => null,
                 'typeFromDefaultValue' => null,
@@ -1154,6 +1169,7 @@ final class CheckClasses
             $property = $class->properties[$propertyName] ?? null;
 
             if ($property !== null) {
+                $propertyTypes['typeFromPhpDocResolved'] = $property->typeFromPhpDocResolved;
                 $error = self::checkDeprecatedAttributeOnProperty(
                     $property,
                     $class->name ?? '?',
