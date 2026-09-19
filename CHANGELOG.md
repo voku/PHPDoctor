@@ -5,6 +5,7 @@
 - deps: update `voku/simple-php-code-parser` to `~0.22.0`
 - fix: use import-aware resolved PHPDoc class-like types for function and method parameters, return types, and properties while preserving existing pseudo-type handling
 - ci: test the PHPUnit suite on PHP `8.4` and `8.5` in addition to PHP `8.1`–`8.3`
+
 ### 0.8.0 (2026-04-26)
 
 - feat: add type and PHPDoc quality profiling for native type coverage, PHPDoc coverage, deprecated documentation, and parse-error reporting
