@@ -85,6 +85,13 @@ final class CheckFunctions
         ) as $functionName => $functionInfo) {
             $function = $functions[$functionName] ?? null;
             if ($function instanceof \voku\SimplePhpParser\Model\PHPFunction) {
+                foreach ($function->parameters as $parameter) {
+                    if (isset($functionInfo['paramsTypes'][$parameter->name])) {
+                        $functionInfo['paramsTypes'][$parameter->name]['typeFromPhpDocResolved'] = $parameter->typeFromPhpDocResolved;
+                    }
+                }
+                $functionInfo['returnTypes']['typeFromPhpDocResolved'] = $function->returnTypeFromPhpDocResolved;
+
                 $diagnostics = self::checkDeprecatedAttributeOnFunction(
                     $function,
                     $diagnostics
@@ -248,6 +255,7 @@ final class CheckFunctions
      *         type?: null|string,
      *         typeFromPhpDoc?: null|string,
      *         typeFromPhpDocExtended?: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple?: null|string,
      *         typeFromPhpDocMaybeWithComment?: null|string,
      *         typeFromDefaultValue?: null|string
@@ -256,6 +264,7 @@ final class CheckFunctions
      *         type: null|string,
      *         typeFromPhpDoc: null|string,
      *         typeFromPhpDocExtended: null|string,
+     *         typeFromPhpDocResolved?: null|string,
      *         typeFromPhpDocSimple: null|string,
      *         typeFromPhpDocMaybeWithComment: null|string
      *     },
@@ -279,6 +288,7 @@ final class CheckFunctions
                 'type' => null,
                 'typeFromPhpDoc' => null,
                 'typeFromPhpDocExtended' => null,
+                'typeFromPhpDocResolved' => null,
                 'typeFromPhpDocSimple' => null,
                 'typeFromPhpDocMaybeWithComment' => null,
                 'typeFromDefaultValue' => null,
